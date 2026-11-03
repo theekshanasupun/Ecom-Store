@@ -1,0 +1,3 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Something broke</title>
+<style>body{margin:0;background:#0b0b0d;color:#f3f1ec;font-family:system-ui,sans-serif;display:grid;place-items:center;min-height:100vh;text-align:center;padding:24px}h1{font:800 clamp(44px,12vw,110px)/.95 Arial Black,sans-serif;margin:0 0 12px}em{color:#c6ff3d;font-style:normal}p{color:#8a8a93}a{color:#c6ff3d}</style></head>
+<body><div><h1>Something<br><em>broke.</em></h1><p>We logged the problem. Please try again in a moment.</p><p><a href="/">Back to the store</a></p></div></body></html>
