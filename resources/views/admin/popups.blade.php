@@ -1,6 +1,7 @@
 <?php /** @var array $rows */ ?>
 <div class="toolbar"><label class="chk" style="margin:0"><span class="muted">Popups are <?= setting('popups_on') === '1' ? 'enabled' : 'switched off' ?> sitewide — change under <a href="<?= e(url('admin/settings?tab=bars')) ?>">Settings → Banners</a>.</span></label><a class="btn" href="<?= e(url('admin/popups/new')) ?>">+ New popup</a></div>
-<section class="apanel flush"><div class="tbl-wrap"><table class="tbl">
+<div class="quick" style="margin-bottom:12px"><input type="search" data-tablefilter="#popup-table" placeholder="Filter popups…" aria-label="Filter popups"></div>
+<section class="apanel flush"><div class="tbl-wrap"><table class="tbl" id="popup-table">
 <thead><tr><th>Popup</th><th>Type</th><th>Trigger</th><th>Shows on</th><th class="r">Views</th><th class="r">Conversions</th><th>Status</th><th></th></tr></thead><tbody>
 <?php foreach ($rows as $p): $rate = $p['views'] ? round($p['conversions'] / $p['views'] * 100, 1) : 0;
   $trig = ['delay' => 'After ' . $p['trigger_value'] . 's', 'exit' => 'Exit intent', 'scroll' => $p['trigger_value'] . '% scroll', 'click' => 'Link click (#popup-' . $p['id'] . ')', 'load' => 'Page load'][$p['trigger']] ?? $p['trigger']; ?>

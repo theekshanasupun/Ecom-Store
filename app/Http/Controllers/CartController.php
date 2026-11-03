@@ -51,6 +51,33 @@ class CartController extends Controller
         return back();
     }
 
+    /** Add several products at once (bundles, "frequently bought together", checkout order-bumps). */
+    public function addMany(Request $r)
+    {
+        $ids = array_values(array_unique(array_filter(array_map('intval', (array) $r->input('ids')))));
+        $added = 0;
+        $errors = [];
+        foreach (array_slice($ids, 0, 12) as $id) {
+            $res = Cart::add($id, 1, (array) ($r->input('opt.'.$id) ?? []));
+            $res['ok'] ? $added++ : $errors[] = $res['error'];
+        }
+        if ($oid = (int) $r->input('offer')) {
+            try { \App\Models\Offer::whereKey($oid)->increment('adds'); } catch (\Throwable) {}
+        }
+        \App\Support\Marketing::trackCart();
+        if (! $added) {
+            if ($r->expectsJson()) return response()->json(['ok' => false, 'error' => $errors[0] ?? 'Nothing could be added.'], 422);
+            flash('error', $errors[0] ?? 'Nothing could be added.');
+
+            return back();
+        }
+        $msg = $added === 1 ? 'Added to cart' : $added.' items added to cart';
+        if ($r->expectsJson()) return response()->json($this->payload(['message' => $msg, 'name' => '', 'warnings' => $errors]));
+        flash('success', $msg.'.');
+
+        return back();
+    }
+
     public function update(Request $r)
     {
         Cart::setQty((string) $r->input('key'), (int) $r->input('qty'));

@@ -18,6 +18,9 @@ use ZipArchive;
  */
 final class Updater
 {
+    /** How many past updates (history entries, log lines, pre-update backups) are kept. */
+    public const KEEP = 3;
+
     private const PROTECTED = ['storage/', 'public/uploads/', '.env', '.git/', 'bootstrap/cache/'];
 
     public static function apply(string $zipPath): array
@@ -40,7 +43,8 @@ final class Updater
 
         $files = [];
         for ($i = 0; $i < $zip->numFiles; $i++) {
-            $name = str_replace('\\', '/', $zip->getNameIndex($i));
+            $name = preg_replace('#/+#', '/', str_replace('\\', '/', $zip->getNameIndex($i)));
+            while (str_starts_with($name, './')) $name = substr($name, 2);
             if ($name === '' || str_ends_with($name, '/') || $name === 'update.json' || str_starts_with($name, '__MACOSX/')) continue;
             if (str_contains($name, '..') || str_starts_with($name, '/') || preg_match('#^[a-z]:#i', $name) || str_contains($name, "\0")) return $fail('Package rejected: unsafe path "'.$name.'".');
             foreach (self::PROTECTED as $pp) {
@@ -81,16 +85,19 @@ final class Updater
             $zip->close();
             $log[] = count($files).' files updated';
             foreach ((array) ($meta['delete'] ?? []) as $d) {
-                if (! is_string($d) || str_contains($d, '..') || str_starts_with($d, '/')) continue;
+                if (! is_string($d)) continue;
+                $d = preg_replace('#/+#', '/', str_replace('\\', '/', $d));
+                while (str_starts_with($d, './')) $d = substr($d, 2);
+                if (str_contains($d, '..') || str_starts_with($d, '/') || str_starts_with($d, '.')) continue;
                 foreach (self::PROTECTED as $pp) if (str_starts_with($d, $pp)) continue 2;
                 if (is_file(base_path($d))) @unlink(base_path($d));
             }
-            // authoritative version file
-            file_put_contents(config_path('kiosk.php'), "<?php\n\nreturn ['version' => '$new'];\n");
             if (function_exists('opcache_reset')) @opcache_reset();
 
             Artisan::call('migrate', ['--force' => true]);
             $log[] = 'Database migrated';
+            // authoritative version file — written only after the migrations succeeded so a failed run can be retried
+            file_put_contents(config_path('kiosk.php'), "<?php\n\nreturn ['version' => '$new'];\n");
             $post = base_path('post_update.php');
             if (is_file($post)) {
                 (static function () use ($post) { include $post; })();
@@ -100,8 +107,10 @@ final class Updater
             self::clearCaches();
             $hist = json_decode((string) setting('update_history', '[]'), true) ?: [];
             array_unshift($hist, ['version' => $new, 'from' => $current, 'at' => now()->toDateTimeString(), 'notes' => (string) ($meta['notes'] ?? '')]);
-            Settings::set('update_history', json_encode(array_slice($hist, 0, 20)));
+            Settings::set('update_history', json_encode(array_slice($hist, 0, self::KEEP)));
             @file_put_contents(storage_path('logs/updates.log'), '['.now().'] v'.$current.' -> v'.$new.' | '.implode(' | ', $log)."\n", FILE_APPEND);
+            $pruned = self::prune();
+            if ($pruned['removed']) $log[] = 'Cleaned '.$pruned['removed'].' old update file(s)';
         } catch (\Throwable $e) {
             @unlink(storage_path('framework/updating.flag'));
             @$zip->close();
@@ -111,6 +120,39 @@ final class Updater
         @unlink(storage_path('framework/updating.flag'));
 
         return ['ok' => true, 'msg' => "Updated to v$new", 'log' => $log, 'version' => $new];
+    }
+
+    /**
+     * Keep only the last KEEP updates: history list, updates.log lines and pre-update backup zips.
+     * Manual database backups are never touched.
+     * @return array{removed:int,freed:int}
+     */
+    public static function prune(): array
+    {
+        $removed = 0;
+        $freed = 0;
+        $hist = json_decode((string) setting('update_history', '[]'), true) ?: [];
+        if (count($hist) > self::KEEP) {
+            Settings::set('update_history', json_encode(array_slice($hist, 0, self::KEEP)));
+            $removed += count($hist) - self::KEEP;
+        }
+        $log = storage_path('logs/updates.log');
+        if (is_file($log)) {
+            $lines = array_values(array_filter(file($log, FILE_IGNORE_NEW_LINES) ?: [], fn ($l) => trim($l) !== ''));
+            if (count($lines) > self::KEEP) {
+                $removed += count($lines) - self::KEEP;
+                @file_put_contents($log, implode("\n", array_slice($lines, -self::KEEP))."\n");
+            }
+        }
+        $zips = glob(storage_path('app/backups/pre-update-*.zip')) ?: [];
+        usort($zips, fn ($a, $b) => filemtime($b) <=> filemtime($a));
+        foreach (array_slice($zips, self::KEEP) as $z) {
+            $freed += (int) @filesize($z);
+            if (@unlink($z)) $removed++;
+        }
+        foreach (glob(storage_path('app/tmp/update-*.zip')) ?: [] as $t) { $freed += (int) @filesize($t); if (@unlink($t)) $removed++; }
+
+        return ['removed' => $removed, 'freed' => $freed];
     }
 
     public static function clearCaches(): void

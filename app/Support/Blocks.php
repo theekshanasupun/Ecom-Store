@@ -18,6 +18,12 @@ final class Blocks
         return [
             'hero' => ['Hero', '▣', [['eyebrow', 'Small label', 'text'], ['title', 'Headline', 'text'], ['accent', 'Accent words', 'text'], ['text', 'Paragraph', 'area'], ['btn', 'Button text', 'text'], ['url', 'Button link', 'text'], ['btn2', 'Second button', 'text'], ['url2', 'Second link', 'text'], ['image', 'Background image URL', 'text']],
                 ['eyebrow' => 'New season', 'title' => 'Make a bold first impression', 'accent' => 'bold', 'text' => 'Tell visitors what makes your store different.', 'btn' => 'Shop now', 'url' => '/', 'btn2' => '', 'url2' => '', 'image' => '']],
+            'home_hero' => ['Home hero (current)', '★', [['line1', 'Headline — line 1', 'text'], ['line2', 'Headline — line 2 (accent)', 'text'], ['text', 'Intro paragraph', 'area']],
+                ['line1' => (string) setting('hero_line1'), 'line2' => (string) setting('hero_line2'), 'text' => (string) setting('hero_text')]],
+            'home_panels' => ['Department panels (current)', '▥', [], []],
+            'home_trending' => ['Trending products (current)', '▦', [['title', 'Heading (line break allowed)', 'area'], ['count', 'How many products', 'number']], ['title' => "Trending\nright now", 'count' => '8']],
+            'home_mixit' => ['Mix-it-all-up (current)', '◫', [['eyebrow', 'Small label', 'text'], ['title', 'Heading', 'area'], ['text', 'Paragraph', 'area'], ['btn', 'Button text', 'text'], ['url', 'Button link', 'text']],
+                ['eyebrow' => 'One cart, one checkout', 'title' => "Mix it\nall up.", 'text' => 'A toy, a tee and a game key can ride in the same order. Keys arrive instantly, physical items ship, and you pay once.', 'btn' => 'See your cart →', 'url' => 'cart']],
             'text' => ['Rich text', '¶', [['title', 'Heading', 'text'], ['body', 'Content (HTML allowed)', 'area']], ['title' => 'Heading', 'body' => '<p>Write something here.</p>']],
             'image_text' => ['Image + text', '◨', [['image', 'Image URL', 'text'], ['title', 'Heading', 'text'], ['body', 'Text', 'area'], ['btn', 'Button text', 'text'], ['url', 'Button link', 'text'], ['side', 'Image side', 'select', ['left' => 'Left', 'right' => 'Right']]],
                 ['image' => '', 'title' => 'A story worth telling', 'body' => 'Pair a picture with a short description.', 'btn' => '', 'url' => '', 'side' => 'left']],
@@ -31,9 +37,39 @@ final class Blocks
             'countdown' => ['Countdown', '⏱', [['title', 'Heading', 'text'], ['date', 'Ends at (YYYY-MM-DD HH:MM)', 'text'], ['btn', 'Button text', 'text'], ['url', 'Button link', 'text']], ['title' => 'Sale ends in', 'date' => '', 'btn' => 'Shop the sale', 'url' => '/']],
             'video' => ['Video embed', '▶', [['url', 'YouTube / Vimeo URL', 'text'], ['title', 'Heading', 'text']], ['url' => '', 'title' => '']],
             'newsletter' => ['Email signup', '✉', [['title', 'Heading', 'text'], ['text', 'Text', 'text'], ['btn', 'Button text', 'text']], ['title' => 'Join the list', 'text' => 'Deals and new drops, straight to your inbox.', 'btn' => 'Subscribe']],
+            'gallery' => ['Image gallery', '▩', [['title', 'Heading', 'text'], ['items', 'One per line: Image URL | Caption | Link (optional)', 'area'], ['cols', 'Columns', 'select', ['2' => '2', '3' => '3', '4' => '4']]], ['title' => 'Gallery', 'items' => "https://picsum.photos/seed/k1/600/600 | First\nhttps://picsum.photos/seed/k2/600/600 | Second\nhttps://picsum.photos/seed/k3/600/600 | Third", 'cols' => '3']],
+            'logos' => ['Logo / brand strip', '◌', [['title', 'Heading', 'text'], ['items', 'One per line: Image URL or plain name | Link (optional)', 'area']], ['title' => 'As seen in', 'items' => "BRAND ONE\nBRAND TWO\nBRAND THREE\nBRAND FOUR"]],
+            'pricing' => ['Pricing / plans table', '☰', [['title', 'Heading', 'text'], ['items', 'One per line: Plan | Price | Features (; separated) | Button | Link | featured', 'area']], ['title' => 'Choose your plan', 'items' => "Starter | \$9 | 1 item; Email support | Choose | / |\nPro | \$29 | Unlimited; Priority support; Gift wrap | Choose | / | featured\nTeam | \$79 | Everything in Pro; Dedicated manager | Contact | / |"]],
+            'strip' => ['Announcement strip', '▭', [['text', 'Message', 'text'], ['btn', 'Link text', 'text'], ['url', 'Link', 'text']], ['text' => 'Free delivery on orders over $75', 'btn' => 'Shop now', 'url' => '/']],
             'spacer' => ['Spacer', '↕', [['h', 'Height (px)', 'number']], ['h' => '48']],
             'html' => ['Custom HTML', '</>', [['code', 'HTML', 'area']], ['code' => '<p>Custom HTML</p>']],
         ];
+    }
+
+    /** type => palette group. */
+    public static function groups(): array
+    {
+        return ['Current home' => ['home_hero', 'home_panels', 'home_trending', 'home_mixit'], 'Hero & content' => ['hero', 'text', 'image_text', 'banner', 'strip', 'features', 'video', 'gallery'],
+            'Store' => ['products', 'categories', 'countdown', 'newsletter'], 'Social proof' => ['testimonials', 'faq', 'logos', 'pricing'], 'Layout' => ['spacer', 'html']];
+    }
+
+    /** Default block styling per type (home_* blocks bring their own spacing). */
+    public static function defaultStyle(string $type): array
+    {
+        $base = ['bg' => '', 'color' => '', 'pad' => 'md', 'align' => 'left', 'width' => 'box', 'hide' => ''];
+
+        return str_starts_with($type, 'home_') ? ['pad' => 'none', 'width' => 'full'] + $base : ($type === 'strip' ? ['pad' => 'sm', 'width' => 'full', 'align' => 'center', 'bg' => '#c6ff3d', 'color' => '#0b0b0d'] + $base : $base);
+    }
+
+    /** The home page exactly as it is rendered today, expressed as blocks. */
+    public static function currentHome(): array
+    {
+        $out = [];
+        foreach (['home_hero', 'home_panels', 'home_trending', 'home_mixit'] as $t) {
+            $out[] = ['id' => 'cur'.substr(md5($t), 0, 6), 'type' => $t, 'props' => self::registry()[$t][3], 'style' => self::defaultStyle($t), 'current' => true];
+        }
+
+        return $out;
     }
 
     public static function decode(?string $json): array
@@ -103,7 +139,7 @@ final class Blocks
         $css = ($st['bg'] ? 'background:'.$st['bg'].';' : '').($st['color'] ? 'color:'.$st['color'].';' : '');
         $cls = 'bb bb-'.$type.' pad-'.$st['pad'].' al-'.$st['align'].' w-'.$st['width'].($st['hide'] ? ' hide-'.$st['hide'] : '');
 
-        return '<section class="'.e($cls).'" data-bid="'.e((string) ($b['id'] ?? '')).'"'.($css ? ' style="'.e($css).'"' : '').'><div class="bb-in">'.$inner.'</div></section>'."\n";
+        return '<section class="'.e($cls).'" data-bid="'.e((string) ($b['id'] ?? '')).'"'.(! empty(Meta::$data['builder_preview']) ? ' data-bt="'.e($reg[$type][0]).'"' : '').($css ? ' style="'.e($css).'"' : '').'><div class="bb-in">'.$inner.'</div></section>'."\n";
     }
 
     private static function btn(string $t, string $u, string $cls = 'btn'): string
@@ -222,7 +258,70 @@ final class Blocks
 
     private static function b_newsletter(array $p): string
     {
-        return '<div class="bb-news"><div>'.self::h($p['title']).'<p>'.e($p['text']).'</p></div><form data-subscribe><input type="email" name="email" placeholder="you@example.com" required aria-label="Email"><button class="btn">'.e($p['btn'] ?: 'Subscribe').'</button><small class="sub-msg" hidden></small></form></div>';
+        return '<div class="bb-news"><div>'.self::h($p['title']).'<p>'.e($p['text']).'</p></div><form data-news class="news-form">'.\App\Http\Controllers\NewsletterController::fields().'<input type="email" name="email" placeholder="you@example.com" required aria-label="Email"><button class="btn">'.e($p['btn'] ?: 'Subscribe').'</button><small class="sub-msg" hidden></small></form></div>';
+    }
+
+    private static function b_home_hero(array $p): string
+    {
+        return partial('partials/home_hero', ['props' => $p]);
+    }
+
+    private static function b_home_panels(array $p): string
+    {
+        return partial('partials/home_panels');
+    }
+
+    private static function b_home_trending(array $p): string
+    {
+        return partial('partials/home_trending', ['props' => $p]);
+    }
+
+    private static function b_home_mixit(array $p): string
+    {
+        return partial('partials/home_mixit', ['props' => $p]);
+    }
+
+    private static function b_gallery(array $p): string
+    {
+        $cols = in_array((string) $p['cols'], ['2', '3', '4'], true) ? $p['cols'] : '3';
+        $h = self::h($p['title']).'<div class="bb-gal cols-'.$cols.'">';
+        foreach (self::lines($p['items']) as $l) {
+            if (($l[0] ?? '') === '') continue;
+            $img = '<img src="'.e(self::href($l[0])).'" alt="'.e($l[1] ?? '').'" loading="lazy">'.(($l[1] ?? '') !== '' ? '<figcaption>'.e($l[1]).'</figcaption>' : '');
+            $h .= '<figure>'.(($l[2] ?? '') !== '' ? '<a href="'.e(self::href($l[2])).'">'.$img.'</a>' : $img).'</figure>';
+        }
+
+        return $h.'</div>';
+    }
+
+    private static function b_logos(array $p): string
+    {
+        $h = self::h($p['title']).'<div class="bb-logos">';
+        foreach (self::lines($p['items']) as $l) {
+            $a = $l[0] ?? '';
+            if ($a === '') continue;
+            $inner = preg_match('#^(https?:)?//|^/#', $a) ? '<img src="'.e(self::href($a)).'" alt="" loading="lazy">' : '<span>'.e($a).'</span>';
+            $h .= ($l[1] ?? '') !== '' ? '<a href="'.e(self::href($l[1])).'">'.$inner.'</a>' : '<div>'.$inner.'</div>';
+        }
+
+        return $h.'</div>';
+    }
+
+    private static function b_pricing(array $p): string
+    {
+        $h = self::h($p['title']).'<div class="bb-plans">';
+        foreach (self::lines($p['items']) as $l) {
+            $feat = array_filter(array_map('trim', explode(';', $l[2] ?? '')));
+            $h .= '<div class="bb-plan'.((($l[5] ?? '') === 'featured') ? ' on' : '').'"><h3>'.e($l[0] ?? '').'</h3><div class="pr">'.e($l[1] ?? '').'</div><ul>'
+                .implode('', array_map(fn ($f) => '<li>'.e($f).'</li>', $feat)).'</ul>'.self::btn($l[3] ?? '', $l[4] ?? '', (($l[5] ?? '') === 'featured') ? 'btn' : 'btn btn-ghost').'</div>';
+        }
+
+        return $h.'</div>';
+    }
+
+    private static function b_strip(array $p): string
+    {
+        return '<div class="bb-strip"><span>'.e($p['text']).'</span>'.($p['btn'] !== '' ? '<a href="'.e(self::href($p['url'])).'">'.e($p['btn']).' →</a>' : '').'</div>';
     }
 
     private static function b_spacer(array $p): string

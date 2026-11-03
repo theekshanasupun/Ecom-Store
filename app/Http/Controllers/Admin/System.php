@@ -20,7 +20,7 @@ class System extends Controller
         $backups = [];
         foreach (glob(storage_path('app/backups/*.{zip,sql}'), GLOB_BRACE) ?: [] as $f) $backups[] = ['name' => basename($f), 'size' => filesize($f), 'time' => date('Y-m-d H:i', filemtime($f))];
         usort($backups, fn ($a, $b) => strcmp($b['time'], $a['time']));
-        $history = json_decode((string) setting('update_history', '[]'), true) ?: [];
+        $history = array_slice(json_decode((string) setting('update_history', '[]'), true) ?: [], 0, Updater::KEEP);
         $driver = DB::connection()->getDriverName();
         $dbv = $driver === 'sqlite' ? 'SQLite '.DB::selectOne('select sqlite_version() v')->v : 'MySQL '.DB::selectOne('select version() v')->v;
         $info = [
@@ -92,6 +92,14 @@ class System extends Controller
         if (! preg_match('/^[A-Za-z0-9._-]+\.(zip|sql)$/', $f) || ! is_file(storage_path('app/backups/'.$f))) abort(404);
 
         return response()->download(storage_path('app/backups/'.$f));
+    }
+
+    public function prune()
+    {
+        $r = Updater::prune();
+        flash('success', $r['removed'] ? 'Cleaned up '.$r['removed'].' old update item(s), freed '.round($r['freed'] / 1048576, 1).' MB.' : 'Nothing to clean — only the last '.Updater::KEEP.' updates are kept.');
+
+        return redirect('/admin/system');
     }
 
     public function cache()

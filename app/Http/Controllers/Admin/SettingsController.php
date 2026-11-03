@@ -17,7 +17,8 @@ class SettingsController extends Controller
         'seo' => ['label' => 'SEO', 'keys' => ['seo_title_tpl', 'seo_home_title', 'meta_description', 'seo_keywords', 'seo_twitter', 'seo_noindex_site', 'seo_canonical', 'seo_schema_org', 'seo_schema_product', 'seo_schema_search', 'seo_breadcrumbs', 'seo_ai_allow', 'seo_llms_on', 'seo_llms_extra', 'seo_robots_extra', 'seo_google_verify', 'seo_bing_verify', 'seo_pinterest_verify', 'ga4_id', 'gtm_id', 'fb_pixel', 'seo_head_code', 'seo_body_code']],
         'geo' => ['label' => 'GEO / local', 'keys' => ['geo_on', 'geo_type', 'geo_name', 'geo_street', 'geo_city', 'geo_region', 'geo_postal', 'geo_country', 'geo_lat', 'geo_lng', 'geo_hours', 'geo_price_range', 'geo_areas', 'geo_same_as']],
         'social' => ['label' => 'Social login', 'keys' => ['login_google_on', 'google_id', 'google_secret', 'login_facebook_on', 'facebook_id', 'facebook_secret', 'login_github_on', 'github_id', 'github_secret', 'login_discord_on', 'discord_id', 'discord_secret']],
-        'shipping' => ['label' => 'Shipping & tax', 'keys' => ['shipping_flat', 'free_shipping_min', 'shipping_note', 'tax_rate', 'tax_label'], 'money' => ['shipping_flat', 'free_shipping_min']],
+        'shipping' => ['label' => 'Shipping & tax', 'keys' => ['shipping_flat', 'free_shipping_min', 'shipping_note', 'ship_std_label', 'shipping_methods', 'tax_rate', 'tax_label'], 'money' => ['shipping_flat', 'free_shipping_min']],
+        'accounts' => ['label' => 'Accounts & checkout', 'keys' => ['guest_checkout', 'login_password_on', 'login_otp_on', 'login_otp_staff', 'checkout_subscribe_default', 'newsletter_footer_on', 'newsletter_title', 'newsletter_text', 'credit_on']],
         'payments' => ['label' => 'Payments', 'keys' => ['pay_bank_on', 'pay_bank_label', 'pay_bank_info', 'pay_cod_on', 'pay_cod_label', 'pay_stripe_on', 'pay_stripe_label', 'stripe_pk', 'stripe_sk', 'stripe_whsec', 'pay_paypal_on', 'pay_paypal_label', 'paypal_client', 'paypal_secret', 'paypal_sandbox']],
         'email' => ['label' => 'Email', 'keys' => ['mail_driver', 'mail_from', 'mail_from_name', 'smtp_host', 'smtp_port', 'smtp_enc', 'smtp_user', 'smtp_pass']],
     ];
@@ -48,6 +49,8 @@ class SettingsController extends Controller
             if ($k === 'geo_country') $v = strtoupper(mb_substr($v, 0, 2));
             if (in_array($k, ['seo_head_code', 'seo_body_code'], true) && ! auth()->user()->isAdmin()) continue;
             if ($k === 'tax_rate') $v = (string) max(0, min(100, (float) $v));
+            if ($k === 'shipping_methods') $v = implode("\n", array_slice(array_filter(array_map(fn ($l) => mb_substr(trim($l), 0, 160), preg_split('/\R/', (string) $r->input($k)))), 0, 8));
+            if ($k === 'login_password_on' && $v === '0' && $r->input('login_otp_on') === '0') $v = '1'; // never lock everyone out
             $data[$k] = $v;
         }
         try {

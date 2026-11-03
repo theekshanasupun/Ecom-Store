@@ -28,8 +28,47 @@ class Checkout extends Controller
         $u = Auth::user();
         title('Checkout');
         Meta::$data['step'] = 2;
+        $last = $u ? \App\Models\Order::where('user_id', $u->id)->where('has_physical', true)->orderByDesc('id')->first() : null;
+        $pids = array_map(fn ($l) => (int) $l['p']->id, array_filter($sum['lines'], fn ($l) => empty($l['gc'])));
+        $cats = array_map(fn ($l) => (int) $l['p']->category_id, array_filter($sum['lines'], fn ($l) => empty($l['gc'])));
+        $bumps = \App\Services\Offers::forPlacement('checkout', $pids, $cats);
+        \App\Services\Offers::seen($bumps);
 
-        return page('checkout', compact('sum', 'methods', 'u'));
+        return page('checkout', compact('sum', 'methods', 'u', 'last', 'bumps'));
+    }
+
+    /** Live updates from the checkout page: coupon, gift card, store credit and delivery method. Returns the refreshed summary. */
+    public function apply(Request $r)
+    {
+        $act = (string) $r->input('action');
+        $err = null;
+        $ok = true;
+        switch ($act) {
+            case 'coupon':
+                $code = trim((string) $r->input('code'));
+                Cart::setCoupon($code ?: null);
+                $sum = Cart::summary();
+                if ($code && $sum['coupon_error']) { $err = $sum['coupon_error']; $ok = false; }
+                break;
+            case 'gift':
+                $code = trim((string) $r->input('code'));
+                if ($code === '') { Cart::setGiftCard(null); break; }
+                [$g, $e] = \App\Services\GiftCards::check($code);
+                if (! $g) { $err = $e; $ok = false; break; }
+                Cart::setGiftCard($g->code);
+                break;
+            case 'credit':
+                Cart::setCredit(filter_var($r->input('on'), FILTER_VALIDATE_BOOLEAN));
+                break;
+            case 'ship':
+                Cart::setShip((string) $r->input('id'));
+                break;
+        }
+        $sum = Cart::summary();
+        $methods = Payments::methods($sum['has_physical']);
+
+        return response()->json(['ok' => $ok, 'error' => $err, 'html' => partial('partials/checkout_summary', compact('sum')), 'due' => money($sum['due']), 'free' => $sum['due'] <= 0,
+            'methods' => array_keys($methods), 'cart_count' => $sum['count']]);
     }
 
     /** Remember the email typed at checkout so an abandoned cart can be followed up. */
@@ -42,6 +81,7 @@ class Checkout extends Controller
 
     public function place(Request $r)
     {
+        if ($r->filled('ship')) Cart::setShip((string) $r->input('ship'));
         $sum = Cart::summary();
         if (! $sum['lines'] || $sum['has_sold_out']) {
             flash('error', 'Some items in your cart are no longer available.');
@@ -58,6 +98,8 @@ class Checkout extends Controller
             'notes' => mb_substr($s('notes'), 0, 1000),
         ];
         $method = $s('method');
+        $free = $sum['due'] <= 0;
+        if ($free) $method = $sum['total'] <= 0 ? 'free' : 'balance';
         $err = [];
         if (! filter_var($d['email'], FILTER_VALIDATE_EMAIL)) $err[] = 'Enter a valid email address.';
         if (mb_strlen($d['name']) < 2) $err[] = 'Enter your name.';
@@ -66,15 +108,18 @@ class Checkout extends Controller
                 if ($d[$k] === '') $err[] = 'Enter your '.$l.'.';
             }
         }
-        if (! isset($methods[$method])) $err[] = 'Choose a payment method.';
+        if (! $free && ! isset($methods[$method])) $err[] = 'Choose a payment method.';
         if (! $err && ! empty($sum['coupon']) && ! $sum['coupon_auto']) {
             [$okc, $cerr] = \App\Services\Coupons::validate($sum['coupon'], $sum['subtotal'], array_values(array_filter($sum['lines'], fn ($x) => ! $x['sold_out'])), $d['email'], $u?->id);
             if (! $okc) $err[] = $cerr;
         }
-        $create = $r->input('create_account') === '1' && ! $u;
+        // account: legacy checkbox (create_account=1 + password) or the new account_mode (password | code)
+        $mode = (string) $r->input('account_mode');
+        if ($mode === '' && $r->input('create_account') === '1') $mode = 'password';
+        $create = $mode !== '' && $mode !== 'guest' && ! $u;
         $pass = (string) $r->input('password', '');
         if ($create) {
-            if (strlen($pass) < 8) $err[] = 'Password must be at least 8 characters.';
+            if ($mode === 'password' && strlen($pass) < 8) $err[] = 'Password must be at least 8 characters.';
             if (User::where('email', mb_strtolower($d['email']))->exists()) $err[] = 'An account with that email exists. Please sign in.';
         }
         if ($err) {
@@ -84,9 +129,12 @@ class Checkout extends Controller
             return redirect('/checkout');
         }
         if ($create) {
+            if ($mode !== 'password') $pass = \Illuminate\Support\Str::random(40); // passwordless: sign in with an email code
             $u = User::create(['name' => $d['name'], 'email' => mb_strtolower($d['email']), 'password' => $pass, 'role' => 'customer', 'phone' => $d['phone'], 'status' => 'active']);
             Auth::login($u);
             $r->session()->regenerate();
+            \App\Support\Triggers::fire('customer.registered', ['email' => $u->email, 'name' => $u->name, 'user' => $u, 'ref' => 'u'.$u->id]);
+            // the account was just created: re-price the cart for a signed-in customer (store credit etc. is empty, so totals are unchanged)
         }
         $d['user_id'] = $u?->id;
         try {
@@ -98,8 +146,14 @@ class Checkout extends Controller
         }
         \App\Support\Marketing::orderPlaced($order);
         Cart::clear();
-        \App\Support\Marketing::subscribe($order->email, $order->name, 'auto');
+        if ($r->boolean('subscribe')) \App\Support\Marketing::subscribe($order->email, $order->name, 'checkout');
+        else \App\Support\Marketing::subscribe($order->email, $order->name, 'auto');
 
+        if ($order->due() <= 0) {
+            Orders::markPaid($order, $order->total <= 0 ? 'free' : 'balance');
+
+            return redirect($order->publicUrl());
+        }
         try {
             $go = Payments::start($order);
         } catch (\Throwable $e) {
@@ -110,8 +164,7 @@ class Checkout extends Controller
         }
         if ($go) return redirect()->away($go);
 
-        if ($order->total <= 0) Orders::markPaid($order, 'free');
-        else Orders::sendPending($order);
+        Orders::sendPending($order);
 
         return redirect($order->publicUrl());
     }

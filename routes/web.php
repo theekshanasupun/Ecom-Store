@@ -19,7 +19,7 @@ Route::get('/', [Shop::class, 'home']);
 Route::get('/shop/{slug}', [Shop::class, 'category']);
 Route::get('/product/{slug}', [Shop::class, 'product']);
 Route::get('/search', [Shop::class, 'search']);
-Route::get('/search.json', [Shop::class, 'searchJson']);
+Route::get('/search.json', [Shop::class, 'searchJson'])->middleware('throttle:90,1');
 Route::get('/p/{slug}', [Shop::class, 'page']);
 Route::get('/sitemap.xml', [Shop::class, 'sitemap']);
 Route::get('/robots.txt', [Shop::class, 'robots']);
@@ -62,6 +62,24 @@ Route::middleware('auth')->group(function () {
     Route::get('/account', [Account::class, 'index']);
     Route::post('/account/profile', [Account::class, 'profile']);
 });
+
+// >>> v26 storefront routes (search, auth/OTP, newsletter, gift cards, offers, checkout) — each workstream adds below its own marker
+// >>> v26:front-core
+Route::post('/cart/add-many', [CartController::class, 'addMany']);
+Route::post('/checkout/apply', [Checkout::class, 'apply'])->middleware('throttle:60,1');
+Route::get('/gift-cards', [App\Http\Controllers\GiftCardController::class, 'index']);
+Route::post('/gift-cards/add', [App\Http\Controllers\GiftCardController::class, 'add']);
+Route::get('/gift-cards/balance', [App\Http\Controllers\GiftCardController::class, 'balance']);
+Route::post('/gift-cards/balance', [App\Http\Controllers\GiftCardController::class, 'balancePost'])->middleware('throttle:12,1');
+// >>> v26:front-auth
+Route::post('/login/code', [Account::class, 'loginCode'])->middleware('throttle:12,1');
+Route::get('/login/reset-code', function () { session()->forget(['otp_email', 'otp_name']); return redirect('/login?tab=code'); });
+Route::post('/login/verify', [Account::class, 'loginVerify'])->middleware('throttle:20,1');
+Route::post('/account/password', [Account::class, 'password'])->middleware('auth');
+// >>> v26:front-search
+// >>> v26:front-newsletter
+Route::post('/newsletter/subscribe', [\App\Http\Controllers\NewsletterController::class, 'subscribe'])->middleware('throttle:10,1');
+Route::post('/account/newsletter', [\App\Http\Controllers\NewsletterController::class, 'preference'])->middleware('auth');
 
 // ---- Admin ----
 Route::prefix('admin')->group(function () {
@@ -123,12 +141,6 @@ Route::prefix('admin')->group(function () {
         Route::post('builder/save', [A\Builder::class, 'save']);
         Route::post('builder/preview', [A\Builder::class, 'preview']);
 
-        Route::get('automations', [A\Growth::class, 'automations']);
-        Route::post('automations/settings', [A\Growth::class, 'settings']);
-        Route::post('automations/run', [A\Growth::class, 'runNow']);
-        Route::post('automations/{id}', [A\Growth::class, 'automationSave'])->whereNumber('id');
-        Route::post('automations/{id}/toggle', [A\Growth::class, 'automationToggle'])->whereNumber('id');
-        Route::post('automations/{id}/test', [A\Growth::class, 'automationTest'])->whereNumber('id');
         Route::get('carts', [A\Growth::class, 'carts']);
         Route::post('carts/{id}', [A\Growth::class, 'cartAction'])->whereNumber('id');
         Route::get('subscribers', [A\Growth::class, 'subscribers']);
@@ -138,6 +150,79 @@ Route::prefix('admin')->group(function () {
 
         Route::get('profile', [A\Users::class, 'profile']);
         Route::post('profile', [A\Users::class, 'profileSave']);
+
+        // >>> v26:admin-core
+        Route::get('discounts', [A\Discounts::class, 'index']);
+        Route::post('discounts/save', [A\Discounts::class, 'save']);
+        Route::post('discounts/{id}/toggle', [A\Discounts::class, 'toggle'])->whereNumber('id');
+        Route::post('discounts/{id}/duplicate', [A\Discounts::class, 'duplicate'])->whereNumber('id');
+        Route::post('discounts/{id}/delete', [A\Discounts::class, 'delete'])->whereNumber('id');
+        Route::get('offers', [A\Offers::class, 'index']);
+        Route::post('offers/save', [A\Offers::class, 'save']);
+        Route::post('offers/{id}/toggle', [A\Offers::class, 'toggle'])->whereNumber('id');
+        Route::post('offers/{id}/duplicate', [A\Offers::class, 'duplicate'])->whereNumber('id');
+        Route::post('offers/{id}/delete', [A\Offers::class, 'delete'])->whereNumber('id');
+        Route::get('products/search.json', [A\Offers::class, 'products']);
+        Route::get('gift-cards', [A\GiftCardsAdmin::class, 'index']);
+        Route::post('gift-cards/issue', [A\GiftCardsAdmin::class, 'issue']);
+        Route::post('gift-cards/settings', [A\GiftCardsAdmin::class, 'settings']);
+        Route::get('gift-cards/export', [A\GiftCardsAdmin::class, 'export']);
+        Route::get('gift-cards/{id}', [A\GiftCardsAdmin::class, 'show'])->whereNumber('id');
+        Route::post('gift-cards/{id}/adjust', [A\GiftCardsAdmin::class, 'adjust'])->whereNumber('id');
+        Route::post('gift-cards/{id}/status', [A\GiftCardsAdmin::class, 'status'])->whereNumber('id');
+        Route::post('gift-cards/{id}/resend', [A\GiftCardsAdmin::class, 'resend'])->whereNumber('id');
+        Route::get('credit', [A\Credit::class, 'index']);
+        Route::post('credit/settings', [A\Credit::class, 'settings']);
+        Route::post('credit/adjust', [A\Credit::class, 'adjust']);
+        Route::get('credit/{id}', [A\Credit::class, 'show'])->whereNumber('id');
+        // >>> v26:admin-email
+        Route::get('automations', [A\Automations::class, 'index']);
+        Route::get('automations/new', [A\Automations::class, 'form']);
+        Route::post('automations/create', [A\Automations::class, 'saveCustom']);
+        Route::post('automations/settings', [A\Automations::class, 'settings']);
+        Route::post('automations/run', [A\Automations::class, 'runNow']);
+        Route::get('automations/{id}/edit', [A\Automations::class, 'form'])->whereNumber('id');
+        Route::get('automations/{id}/design', [A\Automations::class, 'design'])->whereNumber('id');
+        Route::post('automations/{id}/design', [A\Automations::class, 'designSave'])->whereNumber('id');
+        Route::post('automations/{id}/reset-design', [A\Automations::class, 'resetDesign'])->whereNumber('id');
+        Route::post('automations/{id}/toggle', [A\Automations::class, 'toggle'])->whereNumber('id');
+        Route::post('automations/{id}/test', [A\Automations::class, 'test'])->whereNumber('id');
+        Route::post('automations/{id}/duplicate', [A\Automations::class, 'duplicate'])->whereNumber('id');
+        Route::post('automations/{id}/delete', [A\Automations::class, 'delete'])->whereNumber('id');
+        Route::post('automations/{id}', [A\Automations::class, 'save'])->whereNumber('id');
+        Route::get('newsletters', [A\Newsletters::class, 'index']);
+        Route::get('newsletters/new', [A\Newsletters::class, 'form']);
+        Route::post('newsletters/save', [A\Newsletters::class, 'save']);
+        Route::get('newsletters/{id}', [A\Newsletters::class, 'form'])->whereNumber('id');
+        Route::get('newsletters/{id}/design', [A\Newsletters::class, 'design'])->whereNumber('id');
+        Route::post('newsletters/{id}/design', [A\Newsletters::class, 'designSave'])->whereNumber('id');
+        Route::post('newsletters/{id}/send', [A\Newsletters::class, 'send'])->whereNumber('id');
+        Route::post('newsletters/{id}/batch', [A\Newsletters::class, 'batch'])->whereNumber('id');
+        Route::post('newsletters/{id}/pause', [A\Newsletters::class, 'pause'])->whereNumber('id');
+        Route::post('newsletters/{id}/duplicate', [A\Newsletters::class, 'duplicate'])->whereNumber('id');
+        Route::post('newsletters/{id}/delete', [A\Newsletters::class, 'delete'])->whereNumber('id');
+        Route::post('email/preview', [A\EmailTools::class, 'preview']);
+        Route::post('email/test', [A\EmailTools::class, 'test']);
+        Route::get('email/products.json', [A\EmailTools::class, 'products']);
+        // >>> v26:admin-ux
+        Route::get('orders/new', [A\OrdersController::class, 'create']);
+        Route::post('orders/create', [A\OrdersController::class, 'store']);
+        Route::get('orders/lookup', [A\OrdersController::class, 'lookup']);
+        Route::post('orders/totals', [A\OrdersController::class, 'totals']);
+        Route::get('orders/export', [A\OrdersController::class, 'export']);
+        Route::post('orders/bulk', [A\OrdersController::class, 'bulk']);
+        Route::post('orders/{id}/quick', [A\OrdersController::class, 'quick'])->whereNumber('id');
+        Route::post('orders/{id}/shipping', [A\OrdersController::class, 'shipping'])->whereNumber('id');
+        Route::post('orders/{id}/contact', [A\OrdersController::class, 'contact'])->whereNumber('id');
+        Route::post('orders/{id}/resend-shipping', [A\OrdersController::class, 'resendShipping'])->whereNumber('id');
+        Route::post('orders/{id}/refund-credit', [A\OrdersController::class, 'refundCredit'])->whereNumber('id');
+        Route::get('orders/{id}/print', [A\OrdersController::class, 'print'])->whereNumber('id');
+        Route::get('search.json', [A\Search::class, 'json']);
+        Route::post('coupons/{id}/toggle', [A\Coupons::class, 'toggle'])->whereNumber('id');
+        Route::post('coupons/{id}/duplicate', [A\Coupons::class, 'duplicate'])->whereNumber('id');
+        // >>> v26:admin-builder
+        Route::post('builder/template', [A\Builder::class, 'template']);
+        Route::post('builder/template/delete', [A\Builder::class, 'templateDelete']);
 
         Route::middleware('admin')->group(function () {
             Route::get('settings', [A\SettingsController::class, 'index']);
@@ -152,6 +237,7 @@ Route::prefix('admin')->group(function () {
             Route::post('system/update', [A\System::class, 'update']);
             Route::post('system/backup', [A\System::class, 'backup']);
             Route::post('system/cache', [A\System::class, 'cache']);
+            Route::post('system/prune', [A\System::class, 'prune']);
             Route::get('system/backups/{file}', [A\System::class, 'download']);
         });
     });

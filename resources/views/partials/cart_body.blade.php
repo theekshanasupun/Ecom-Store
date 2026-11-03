@@ -22,12 +22,13 @@ if (!$sum['lines']): ?>
 
     <?php foreach ($sum['lines'] as $l): $p = $l['p']; ?>
     <article class="card cline <?= $l['sold_out'] ? 'is-out' : '' ?>" style="--c:<?= e($p['color']) ?>">
-      <a class="cline-media" href="<?= e(url('product/' . $p['slug'])) ?>"><?= Catalog::media($p, false) ?></a>
+      <a class="cline-media" href="<?= e(url($p['slug'] ? 'product/' . $p['slug'] : 'gift-cards')) ?>"><?= Catalog::media($p, false) ?></a>
       <div class="cline-body">
-        <span class="dot-label"><i></i><?= e($p['cat']['name'] ?? '') ?></span>
-        <h3><a href="<?= e(url('product/' . $p['slug'])) ?>"><?= e($p['name']) ?></a></h3>
+        <span class="dot-label"><i></i><?= e($p['cat']['name'] ?? (!empty($l['gc']) ? 'Gift cards' : '')) ?></span>
+        <h3><a href="<?= e(url($p['slug'] ? 'product/' . $p['slug'] : 'gift-cards')) ?>"><?= e($p['name']) ?><?= !empty($l['gc']) ? ' · ' . money($l['unit']) : '' ?></a></h3>
         <p class="muted"><?= e(Cart::optLabel($l['opts']) ? $p['tagline'] . ' · ' . Cart::optLabel($l['opts']) : $p['tagline']) ?></p>
         <?php if ($l['sold_out']): ?><span class="tag bad">Sold out — remove to continue</span>
+        <?php elseif (!empty($l['gc'])): ?><span class="tag tag-key">⚡ Emailed <?= !empty($l['gc']['deliver_at']) ? 'on ' . e(date('M j', strtotime($l['gc']['deliver_at']))) : 'instantly' ?><?= !empty($l['gc']['to_email']) ? ' to ' . e($l['gc']['to_email']) : '' ?></span>
         <?php elseif ($p['instant']): ?><span class="tag tag-key">Instant · key on screen + email</span>
         <?php else: ?><span class="tag"><?= e(setting('shipping_note')) ?></span><?php endif; ?>
         <div class="cline-ctl">
@@ -39,10 +40,17 @@ if (!$sum['lines']): ?>
           <form method="post" action="<?= e(url('cart/remove')) ?>" data-cart-form><?= csrf_field() ?><input type="hidden" name="key" value="<?= e($l['key']) ?>"><button class="lnk">Remove</button></form>
         </div>
       </div>
-      <div class="cline-price"><?= money($l['total']) ?></div>
+      <div class="cline-price"><?= money($l['total']) ?><?php if (!empty($l['orig']) && $l['orig'] > $l['unit'] && $l['qty'] > 0): ?><s><?= money($l['orig'] * $l['qty']) ?></s><?php endif; ?><?php if ($l['qty'] > 1): ?><small><?= money($l['unit']) ?> each</small><?php endif; ?></div>
     </article>
     <?php endforeach; ?>
 
+    <?php
+    $cp = array_map(fn ($x) => (int) $x['p']->id, array_filter($sum['lines'], fn ($x) => empty($x['gc'])));
+    $cc = array_map(fn ($x) => (int) $x['p']->category_id, array_filter($sum['lines'], fn ($x) => empty($x['gc'])));
+    $cart_offers = \App\Services\Offers::forPlacement('cart', $cp, $cc);
+    \App\Services\Offers::seen($cart_offers);
+    foreach ($cart_offers as $of) echo partial('partials/offer_block', ['o' => $of['offer'], 'prods' => $of['products'], 'current' => null, 'where' => 'cart']);
+    ?>
     <div class="card outline more">
       <h3>Add one more from another department?</h3>
       <p class="muted">It all rides in this same order.</p>
@@ -52,18 +60,11 @@ if (!$sum['lines']): ?>
 
   <aside class="card summary">
     <h2 class="h3">Summary</h2>
-    <dl class="sumrows">
-      <?php if ($sum['physical'] > 0): ?><div><dt>Physical items</dt><dd><?= money($sum['physical']) ?></dd></div><?php endif; ?>
-      <?php if ($sum['digital'] > 0): ?><div><dt>Digital keys</dt><dd><?= money($sum['digital']) ?></dd></div><?php endif; ?>
-      <?php if ($sum['discount'] > 0): ?><div class="disc"><dt>Discount · <?= e($sum['coupon']['code']) ?></dt><dd>−<?= money($sum['discount']) ?></dd></div><?php endif; ?>
-      <div><dt>Shipping</dt><dd><?= $sum['has_physical'] ? ($sum['shipping'] > 0 ? money($sum['shipping']) : 'Free') : '—' ?></dd></div>
-      <div><dt><?= e(setting('tax_label', 'Tax')) ?></dt><dd><?= (float) setting('tax_rate') > 0 ? money($sum['tax']) : 'At checkout' ?></dd></div>
-    </dl>
+    <?= partial('partials/sum_rows', compact('sum')) ?>
     <form class="promo" method="post" action="<?= e(url('cart/coupon')) ?>" data-cart-form>
       <?= csrf_field() ?><label class="eyebrow-s" for="promo">Promo code</label>
       <div class="promo-row"><input id="promo" name="code" placeholder="Enter code" value="<?= e($sum['coupon']['code'] ?? '') ?>" autocomplete="off"><button class="btn btn-ghost" type="submit"><?= $sum['coupon'] ? 'Update' : 'Apply' ?></button></div>
     </form>
-    <div class="total"><span>Total</span><b><?= money($sum['total']) ?></b></div>
     <?php if ($sum['has_sold_out']): ?><a class="btn btn-block disabled" aria-disabled="true">Remove sold-out items</a>
     <?php else: ?><a class="btn btn-block" href="<?= e(url('checkout')) ?>">Checkout →</a><?php endif; ?>
     <ul class="dots">

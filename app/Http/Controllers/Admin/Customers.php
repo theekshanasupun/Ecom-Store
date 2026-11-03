@@ -48,6 +48,7 @@ class Customers extends Controller
         $u = User::create(['name' => $name, 'email' => $email, 'password' => $pass, 'phone' => trim((string) $r->input('phone')), 'role' => 'customer', 'status' => 'active']);
         Order::where('email', $email)->whereNull('user_id')->update(['user_id' => $u->id]);
         if ($r->boolean('subscribe')) \App\Support\Marketing::subscribe($email, $name, 'admin');
+        \App\Support\Triggers::fire('customer.registered', ['email' => $u->email, 'name' => $u->name, 'user' => $u, 'ref' => 'u'.$u->id]);
         $msg = "Customer {$u->name} added.";
         if ($r->boolean('send_email')) {
             $inner = '<p style="color:#cfcfd6">An account was created for you at <b>'.e(setting('store_name')).'</b>.</p><p style="color:#cfcfd6">Email: <b>'.e($email).'</b><br>Temporary password: <b>'.e($pass).'</b></p><p><a style="color:'.e(setting('accent')).'" href="'.e(url('login')).'">Sign in</a> and change your password from your account page.</p>';

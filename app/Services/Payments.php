@@ -37,7 +37,7 @@ final class Payments
             'success_url' => url('pay/stripe/return').'?order='.$o->number.'&t='.$o->token.'&sid={CHECKOUT_SESSION_ID}',
             'cancel_url' => url('pay/cancel').'?order='.$o->number.'&t='.$o->token,
             'customer_email' => $o->email, 'client_reference_id' => $o->number,
-            'line_items' => [['quantity' => 1, 'price_data' => ['currency' => strtolower($o->currency), 'unit_amount' => $o->total, 'product_data' => ['name' => setting('store_name').' order '.$o->number]]]],
+            'line_items' => [['quantity' => 1, 'price_data' => ['currency' => strtolower($o->currency), 'unit_amount' => $o->due(), 'product_data' => ['name' => setting('store_name').' order '.$o->number]]]],
             'metadata' => ['order' => $o->number],
         ]);
         if ($r->failed() || ! $r->json('url')) {
@@ -51,7 +51,7 @@ final class Payments
     public static function stripeVerify(Order $o, string $sid): bool
     {
         $r = Http::withBasicAuth((string) setting('stripe_sk'), '')->timeout(25)->get('https://api.stripe.com/v1/checkout/sessions/'.rawurlencode($sid));
-        if ($r->ok() && $r->json('payment_status') === 'paid' && $r->json('client_reference_id') === $o->number && (int) $r->json('amount_total') === $o->total) {
+        if ($r->ok() && $r->json('payment_status') === 'paid' && $r->json('client_reference_id') === $o->number && (int) $r->json('amount_total') === $o->due()) {
             Orders::markPaid($o, (string) ($r->json('payment_intent') ?? $sid), 'stripe');
 
             return true;
@@ -78,7 +78,7 @@ final class Payments
         if (($ev['type'] ?? '') === 'checkout.session.completed') {
             $s = $ev['data']['object'] ?? [];
             $o = Order::where('number', (string) ($s['client_reference_id'] ?? ''))->first();
-            if ($o && ($s['payment_status'] ?? '') === 'paid' && (int) $s['amount_total'] === $o->total) {
+            if ($o && ($s['payment_status'] ?? '') === 'paid' && (int) $s['amount_total'] === $o->due()) {
                 Orders::markPaid($o, (string) ($s['payment_intent'] ?? ''), 'stripe-webhook');
             }
         }
@@ -104,7 +104,7 @@ final class Payments
     {
         $r = Http::withToken(self::ppToken())->timeout(25)->post(self::ppBase().'/v2/checkout/orders', [
             'intent' => 'CAPTURE',
-            'purchase_units' => [['reference_id' => $o->number, 'custom_id' => $o->number, 'amount' => ['currency_code' => $o->currency, 'value' => from_cents($o->total)]]],
+            'purchase_units' => [['reference_id' => $o->number, 'custom_id' => $o->number, 'amount' => ['currency_code' => $o->currency, 'value' => from_cents($o->due())]]],
             'application_context' => [
                 'brand_name' => setting('store_name'), 'user_action' => 'PAY_NOW', 'shipping_preference' => 'NO_SHIPPING',
                 'return_url' => url('pay/paypal/return').'?order='.$o->number.'&t='.$o->token,
@@ -127,7 +127,7 @@ final class Payments
         if ($ppOrderId !== $o->payment_ref) return false;
         $r = Http::withToken(self::ppToken())->withBody('{}', 'application/json')->timeout(25)->post(self::ppBase().'/v2/checkout/orders/'.rawurlencode($ppOrderId).'/capture');
         $cap = $r->json('purchase_units.0.payments.captures.0', []);
-        if ($r->json('status') === 'COMPLETED' && (string) ($cap['amount']['value'] ?? '') === from_cents($o->total)) {
+        if ($r->json('status') === 'COMPLETED' && (string) ($cap['amount']['value'] ?? '') === from_cents($o->due())) {
             Orders::markPaid($o, (string) ($cap['id'] ?? $ppOrderId), 'paypal');
 
             return true;

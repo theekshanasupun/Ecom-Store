@@ -125,8 +125,25 @@ $s = fn(string $k) => setting($k);
   <div class="g2"><?= field_text('shipping_flat', 'Flat shipping rate', from_cents((int) $s('shipping_flat')), ['type' => 'number', 'step' => '0.01', 'min' => '0']) ?>
   <?= field_text('free_shipping_min', 'Free shipping over', from_cents((int) $s('free_shipping_min')), ['type' => 'number', 'step' => '0.01', 'min' => '0', 'hint' => '0 disables free shipping. Drives the progress bar in the cart.']) ?></div>
   <?= field_text('shipping_note', 'Delivery promise label', $s('shipping_note'), ['hint' => 'Shown on physical items, e.g. “Ships in 2 days”']) ?>
+  <h2>Delivery options</h2>
+  <?= field_text('ship_std_label', 'Name of the standard option', $s('ship_std_label') ?: 'Standard delivery', ['hint' => 'Uses the flat rate / free-shipping threshold above.']) ?>
+  <?= field_area('shipping_methods', 'Extra delivery options (one per line)', $s('shipping_methods'), ['rows' => 4, 'placeholder' => "Express | 14.99 | 1-2 business days\nNext-day courier | 24.99 | Order before 2pm", 'hint' => 'Format: <code>Name | price | delivery promise</code>. Customers pick one at checkout; the price is added to the order.']) ?>
   <h2>Tax</h2>
   <div class="g2"><?= field_text('tax_rate', 'Tax rate %', $s('tax_rate'), ['type' => 'number', 'step' => '0.01', 'min' => '0', 'max' => '100', 'hint' => 'Added on top of prices. 0 = no tax line.']) ?><?= field_text('tax_label', 'Tax label', $s('tax_label'), ['placeholder' => 'VAT / GST / Tax']) ?></div>
+
+<?php elseif ($tab === 'accounts'): ?>
+  <h2>Sign-in methods</h2>
+  <?= field_check('login_password_on', 'Allow sign-in with a password', setting('login_password_on', '1') === '1') ?>
+  <?= field_check('login_otp_on', 'Allow sign-in / sign-up with a one-time email code (no password)', setting('login_otp_on', '1') === '1', 'Customers type their email, receive a 6-digit code and are signed in — accounts are created automatically.') ?>
+  <?= field_check('login_otp_staff', 'Let staff and admins use email codes too', setting('login_otp_staff', '0') === '1', 'Off by default: admin and staff accounts must use their password.') ?>
+  <h2>Checkout</h2>
+  <?= field_check('guest_checkout', 'Allow guest checkout', setting('guest_checkout', '1') === '1') ?>
+  <?= field_check('checkout_subscribe_default', 'Pre-tick “email me news and offers” at checkout', setting('checkout_subscribe_default', '0') === '1', 'Leave off where consent must be explicit (GDPR).') ?>
+  <?= field_check('credit_on', 'Customers can spend store credit at checkout', \App\Services\StoreCredit::enabled(), 'Manage balances under Promotions → Store credit.') ?>
+  <h2>Newsletter signup</h2>
+  <?= field_check('newsletter_footer_on', 'Show the newsletter signup in the footer', setting('newsletter_footer_on', '1') === '1') ?>
+  <?= field_text('newsletter_title', 'Footer title', setting('newsletter_title', 'Join the list'), ['placeholder' => 'Join the list']) ?>
+  <?= field_text('newsletter_text', 'Footer text', setting('newsletter_text', 'New drops and deals, straight to your inbox.')) ?>
 
 <?php elseif ($tab === 'payments'): ?>
   <h2>Bank transfer / manual</h2>

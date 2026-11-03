@@ -1,3 +1,3 @@
 <?php
 
-return ['version' => '2.5.0'];
+return ['version' => '2.6.0'];
