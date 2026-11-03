@@ -1,0 +1,13 @@
+storage/config.php
+storage/installed.lock
+storage/database.sqlite
+storage/logs/*
+storage/cache/*
+storage/backups/*
+storage/tmp/*
+storage/sessions/*
+storage/files/*
+!storage/*/.gitkeep
+uploads/products/*
+uploads/site/*
+!uploads/*/.gitkeep
