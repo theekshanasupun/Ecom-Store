@@ -584,7 +584,7 @@ final class Loyalty
         if ($perOrder > 0) $maxPts = min($maxPts, $perOrder);
         if ($maxPts < $out['min']) $maxPts = 0;
         $out['points_max'] = $maxPts;
-        if ($reqPoints > 0 && $maxPts > 0) {
+        if ($reqPoints > 0 && $maxPts > 0 && ($reqPoints >= $out['min'] || $reqPoints >= $maxPts)) {
             $pts = min($reqPoints, $maxPts);
             $out['points'] = $pts;
             $out['points_value'] = min($room, self::pointsValue($pts));

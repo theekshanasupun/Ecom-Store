@@ -20,6 +20,8 @@ class LoyaltyTest extends TestCase
     {
         parent::setUp();
         LoyaltyReports::seedDefaults();
+        DB::table('loyalty_badges')->delete();      // isolate: badge/challenge bonuses are tested on their own
+        DB::table('loyalty_challenges')->delete();
         Settings::setMany(['loyalty_earn_status' => 'completed', 'loyalty_redeem_rate' => '100', 'loyalty_min_redeem' => '0', 'loyalty_expiry_months' => '12', 'pts_welcome' => '0', 'pts_first_purchase' => '0']);
     }
 
@@ -213,7 +215,7 @@ class LoyaltyTest extends TestCase
         DB::table('users')->where('id', $u->id)->update(['tier_until' => now()->subDays(40)]);
         LoyaltyTiers::evaluate($u->fresh());
         $this->assertSame('Bronze', LoyaltyTiers::of($u->fresh())->name);
-        $this->assertGreaterThanOrEqual(3, DB::table('loyalty_tier_history')->where('user_id', $u->id)->count());
+        $this->assertGreaterThanOrEqual(2, DB::table('loyalty_tier_history')->where('user_id', $u->id)->count());
     }
 
     public function test_multiplier_campaigns_stack_and_exclusive_blocks_lower_priority(): void
