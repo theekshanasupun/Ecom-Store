@@ -7,4 +7,9 @@ use Illuminate\Database\Eloquent\Model;
 class Page extends Model
 {
     protected $guarded = [];
+
+    protected function casts(): array
+    {
+        return ['use_builder' => 'boolean', 'seo_noindex' => 'boolean'];
+    }
 }

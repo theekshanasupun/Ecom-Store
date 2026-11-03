@@ -23,7 +23,8 @@ class Products extends Controller
             ->when($cat, fn ($x) => $x->where('category_id', $cat))
             ->when(isset(Product::TYPES[$type]), fn ($x) => $x->where('type', $type))
             ->orderByDesc('id');
-        $p = $query->paginate(20)->withQueryString();
+        $per = in_array((int) $r->query('per'), [20, 50, 100], true) ? (int) $r->query('per') : 20;
+        $p = $query->paginate($per)->withQueryString();
         $rows = $p->items();
         $page = $p->currentPage();
         $pages = $p->lastPage();
@@ -31,7 +32,7 @@ class Products extends Controller
         $cats = Category::orderBy('sort_order')->get();
         title('Products');
 
-        return admin_page('products', compact('rows', 'cats', 'q', 'cat', 'type', 'page', 'pages', 'total'));
+        return admin_page('products', compact('rows', 'cats', 'q', 'cat', 'type', 'page', 'pages', 'total', 'per'));
     }
 
     public function form(?int $id = null)
@@ -82,6 +83,7 @@ class Products extends Controller
             'art' => $s('art', 20), 'art_color' => preg_match('/^#[0-9a-fA-F]{6}$/', (string) $r->input('art_color')) ? $r->input('art_color') : '',
             'badge' => $s('badge', 30), 'tags' => $s('tags'), 'options' => $opts ? json_encode($opts, JSON_UNESCAPED_UNICODE) : '',
             'details' => (string) $r->input('details'), 'delivery_note' => $s('delivery_note'),
+            'seo_title' => mb_substr(trim((string) $r->input('seo_title')), 0, 190), 'seo_description' => mb_substr(trim((string) $r->input('seo_description')), 0, 320), 'seo_noindex' => $r->boolean('seo_noindex'),
             'featured' => $r->boolean('featured'), 'status' => $r->input('status') === 'draft' ? 'draft' : 'active',
         ];
         try {
@@ -170,5 +172,86 @@ class Products extends Controller
         }
 
         return redirect('/admin/products');
+    }
+
+    /** Inline "quick edit" from the product list (Shopify-style). */
+    public function quick(Request $r, int $id)
+    {
+        $p = Product::findOrFail($id);
+        $f = (string) $r->input('field');
+        $v = $r->input('value');
+        $upd = match ($f) {
+            'price' => ['price' => max(0, to_cents($v))],
+            'compare_price' => ['compare_price' => max(0, to_cents($v))],
+            'stock' => ['stock' => max(0, (int) $v)],
+            'status' => ['status' => $v === 'draft' ? 'draft' : 'active'],
+            'featured' => ['featured' => filter_var($v, FILTER_VALIDATE_BOOLEAN)],
+            'name' => trim((string) $v) === '' ? [] : ['name' => mb_substr(trim((string) $v), 0, 190)],
+            'sku' => ['sku' => mb_substr(trim((string) $v), 0, 80)],
+            default => [],
+        };
+        if (! $upd) return response()->json(['ok' => false, 'error' => 'Nothing to update.'], 422);
+        $p->update($upd);
+        $p->refresh();
+
+        return response()->json(['ok' => true, 'price' => from_cents((int) $p->price), 'compare' => $p->compare_price ? from_cents((int) $p->compare_price) : '', 'stock' => (int) $p->stock, 'status' => $p->status, 'featured' => (bool) $p->featured, 'name' => $p->name, 'sku' => (string) $p->sku]);
+    }
+
+    /** Bulk actions on selected products. */
+    public function bulk(Request $r)
+    {
+        $ids = array_values(array_unique(array_filter(array_map('intval', (array) $r->input('ids')))));
+        $act = (string) $r->input('action');
+        $val = trim((string) $r->input('value'));
+        if (! $ids || $act === '') {
+            flash('error', 'Select at least one product and an action.');
+
+            return redirect()->back();
+        }
+        $q = Product::whereIn('id', $ids);
+        $n = count($ids);
+        switch ($act) {
+            case 'activate': $q->update(['status' => 'active']); $msg = "$n product(s) published."; break;
+            case 'draft': $q->update(['status' => 'draft']); $msg = "$n product(s) moved to draft."; break;
+            case 'feature': $q->update(['featured' => true]); $msg = "$n product(s) featured."; break;
+            case 'unfeature': $q->update(['featured' => false]); $msg = "$n product(s) un-featured."; break;
+            case 'category':
+                if (! Category::whereKey((int) $val)->exists()) { flash('error', 'Pick a department.'); return redirect()->back(); }
+                $q->update(['category_id' => (int) $val]); $msg = "$n product(s) moved."; break;
+            case 'price_pct':
+                $pct = (float) $val;
+                if ($pct === 0.0 || $pct < -90 || $pct > 500) { flash('error', 'Enter a percentage between -90 and 500 (e.g. -10 for 10% off).'); return redirect()->back(); }
+                foreach ($q->get() as $p) $p->update(['price' => max(0, (int) round($p->price * (1 + $pct / 100)))]);
+                $msg = "Prices changed by $pct% on $n product(s)."; break;
+            case 'sale_pct':
+                $pct = (float) $val;
+                if ($pct <= 0 || $pct >= 95) { flash('error', 'Enter a sale percentage between 1 and 94.'); return redirect()->back(); }
+                foreach ($q->get() as $p) {
+                    $base = $p->compare_price > $p->price ? $p->compare_price : $p->price;
+                    $p->update(['compare_price' => $base, 'price' => max(0, (int) round($base * (1 - $pct / 100)))]);
+                }
+                $msg = "$pct% sale applied to $n product(s)."; break;
+            case 'sale_end':
+                foreach ($q->where('compare_price', '>', 0)->get() as $p) if ($p->compare_price > $p->price) $p->update(['price' => $p->compare_price, 'compare_price' => 0]);
+                $msg = 'Sale prices reset.'; break;
+            case 'stock_set': $q->where('type', 'physical')->update(['stock' => max(0, (int) $val)]); $msg = 'Stock set on physical products.'; break;
+            case 'stock_add':
+                foreach ($q->where('type', 'physical')->get() as $p) $p->update(['stock' => max(0, (int) $p->stock + (int) $val)]);
+                $msg = 'Stock adjusted on physical products.'; break;
+            case 'delete':
+                $hidden = $gone = 0;
+                foreach ($q->get() as $p) {
+                    if (\App\Models\OrderItem::where('product_id', $p->id)->exists()) { $p->update(['status' => 'draft']); $hidden++; continue; }
+                    Upload::remove($p->image);
+                    ProductKey::where('product_id', $p->id)->delete();
+                    $p->delete();
+                    $gone++;
+                }
+                $msg = "$gone deleted".($hidden ? ", $hidden hidden (they have orders)." : '.'); break;
+            default: flash('error', 'Unknown action.'); return redirect()->back();
+        }
+        flash('success', $msg);
+
+        return redirect()->back();
     }
 }

@@ -12,7 +12,7 @@ if [ "$1" = "update" ]; then
   echo "Built release/update-$VER.zip"; exit 0
 fi
 TMP=$(mktemp -d)
-tar --exclude=.git --exclude=release --exclude=tools --exclude=vendor --exclude=.env --exclude=database/database.sqlite --exclude='storage/logs/*.log' --exclude='storage/framework/views/*.php' --exclude='bootstrap/cache/*.php' --exclude='storage/framework/sessions/*' --exclude='public/uploads/products/*' --exclude='public/uploads/site/*' -cf - . | tar -xf - -C "$TMP"
+tar --exclude=.git --exclude=release --exclude=tools --exclude=vendor --exclude=.env --exclude=database/database.sqlite --exclude=storage/app/installed.lock --exclude=storage/app/install-done.json --exclude='storage/logs/*' --exclude='storage/framework/cache/data/*' --exclude='storage/logs/*.log' --exclude='storage/framework/views/*.php' --exclude='bootstrap/cache/*.php' --exclude='storage/framework/sessions/*' --exclude='public/uploads/products/*' --exclude='public/uploads/site/*' -cf - . | tar -xf - -C "$TMP"
 cd "$TMP"
 composer install --no-dev --optimize-autoloader --no-interaction --no-scripts --prefer-dist -q
 # slim vendor/: drop VCS metadata, tests and docs that are never loaded in production

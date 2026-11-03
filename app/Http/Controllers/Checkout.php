@@ -32,6 +32,14 @@ class Checkout extends Controller
         return page('checkout', compact('sum', 'methods', 'u'));
     }
 
+    /** Remember the email typed at checkout so an abandoned cart can be followed up. */
+    public function capture(Request $r)
+    {
+        \App\Support\Marketing::rememberEmail((string) $r->input('email'));
+
+        return response()->json(['ok' => true]);
+    }
+
     public function place(Request $r)
     {
         $sum = Cart::summary();
@@ -59,6 +67,10 @@ class Checkout extends Controller
             }
         }
         if (! isset($methods[$method])) $err[] = 'Choose a payment method.';
+        if (! $err && ! empty($sum['coupon']) && ! $sum['coupon_auto']) {
+            [$okc, $cerr] = \App\Services\Coupons::validate($sum['coupon'], $sum['subtotal'], array_values(array_filter($sum['lines'], fn ($x) => ! $x['sold_out'])), $d['email'], $u?->id);
+            if (! $okc) $err[] = $cerr;
+        }
         $create = $r->input('create_account') === '1' && ! $u;
         $pass = (string) $r->input('password', '');
         if ($create) {
@@ -84,7 +96,9 @@ class Checkout extends Controller
 
             return redirect('/cart');
         }
+        \App\Support\Marketing::orderPlaced($order);
         Cart::clear();
+        \App\Support\Marketing::subscribe($order->email, $order->name, 'auto');
 
         try {
             $go = Payments::start($order);

@@ -40,6 +40,7 @@ class Categories extends Controller
             'eyebrow' => mb_substr(trim((string) $r->input('eyebrow')), 0, 150), 'tagline' => mb_substr(trim((string) $r->input('tagline')), 0, 250),
             'description' => (string) $r->input('description'),
             'color' => preg_match('/^#[0-9a-fA-F]{6}$/', (string) $r->input('color')) ? $r->input('color') : '#c6ff3d',
+            'seo_title' => mb_substr(trim((string) $r->input('seo_title')), 0, 190), 'seo_description' => mb_substr(trim((string) $r->input('seo_description')), 0, 320), 'seo_noindex' => $r->boolean('seo_noindex'),
             'sort_order' => (int) $r->input('sort_order'), 'status' => $r->input('status') === 'hidden' ? 'hidden' : 'active',
         ];
         $slugBase = trim((string) $r->input('slug')) ?: $name;

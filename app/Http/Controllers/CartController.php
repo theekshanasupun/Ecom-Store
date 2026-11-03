@@ -12,7 +12,7 @@ class CartController extends Controller
     {
         $sum = Cart::summary();
 
-        return $extra + ['ok' => true, 'count' => $sum['count'], 'html' => partial('partials/cart_drawer', ['sum' => $sum]), 'subtotal' => money($sum['subtotal'])];
+        return $extra + ['ok' => true, 'free' => Cart::freeBar(), 'count' => $sum['count'], 'html' => partial('partials/cart_drawer', ['sum' => $sum]), 'subtotal' => money($sum['subtotal'])];
     }
 
     public function show(Request $r)
@@ -43,6 +43,7 @@ class CartController extends Controller
 
             return back();
         }
+        \App\Support\Marketing::trackCart();
         if ($r->input('buy_now')) return redirect('/checkout');
         if ($r->expectsJson()) return response()->json($this->payload(['message' => $res['message'], 'name' => $res['name']]));
         flash('success', $res['name'].' added to your cart.');
@@ -53,6 +54,7 @@ class CartController extends Controller
     public function update(Request $r)
     {
         Cart::setQty((string) $r->input('key'), (int) $r->input('qty'));
+        \App\Support\Marketing::trackCart();
 
         return $r->expectsJson() ? response()->json($this->payload()) : redirect('/cart');
     }
@@ -60,6 +62,7 @@ class CartController extends Controller
     public function remove(Request $r)
     {
         Cart::remove((string) $r->input('key'));
+        \App\Support\Marketing::trackCart();
 
         return $r->expectsJson() ? response()->json($this->payload()) : redirect('/cart');
     }
@@ -68,6 +71,7 @@ class CartController extends Controller
     {
         $code = trim((string) $r->input('code'));
         Cart::setCoupon($code ?: null);
+        \App\Support\Marketing::trackCart();
         $sum = Cart::summary();
         if (! $r->expectsJson()) {
             if ($code && $sum['coupon_error']) flash('error', $sum['coupon_error']);
@@ -77,5 +81,22 @@ class CartController extends Controller
         }
 
         return response()->json($this->payload(['error' => $sum['coupon_error']]));
+    }
+
+    /** Abandoned-cart email link: refill the cart and continue. */
+    public function recover(Request $r, string $token)
+    {
+        $row = \App\Models\SavedCart::where('token', $token)->where('status', 'open')->first();
+        if (! $row) {
+            flash('info', 'That cart link has expired — here is your current cart.');
+
+            return redirect('/cart');
+        }
+        Cart::restore($row->lines()['lines'] ?? [], $r->query('c') ?: ($row->lines()['coupon'] ?? null));
+        session(['saved_cart' => $row->token, 'capture_email' => $row->email]);
+        $row->update(['last_activity_at' => now()]);
+        flash('success', 'Welcome back! Your cart is ready.');
+
+        return redirect('/cart');
     }
 }

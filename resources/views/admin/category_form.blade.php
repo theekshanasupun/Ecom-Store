@@ -15,5 +15,6 @@
     <?= field_select('status', 'Status', ['active' => 'Active', 'hidden' => 'Hidden'], $v('status', 'active')) ?>
     <div class="actions"><button class="btn block">Save department</button></div>
   </section>
+  <div class="wide"><?= partial('admin/_seo_fields', ['o' => $c]) ?></div>
 </form>
 <?php if ($c): ?><form method="post" action="<?= e(url('admin/categories/' . $c['id'] . '/delete')) ?>" onsubmit="return confirm('Delete this department?')" style="margin-top:20px"><?= csrf_field() ?><button class="btn sm ghost danger">Delete department</button></form><?php endif; ?>

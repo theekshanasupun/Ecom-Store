@@ -73,10 +73,10 @@ input,select{width:100%;background:#0b0b0d;border:1px solid #2c2c35;border-radiu
 <div class="actions"><a class="btn ghost" href="{{ url('install/site') }}">Back</a><button class="btn">Install now</button></div></form></div>
 
 @else
-<h1>You're<br><em>live.</em></h1><p class="muted">KIOSK is installed. Sign in to the admin to add products, set up payments and make it yours.</p>
+<h1>You're<br><em>live.</em></h1><p class="muted">KIOSK is installed. Sign in with your admin account (then choose “Admin panel” in the account menu) to add products, set up payments and make it yours.</p>
 <div class="card" style="margin-top:22px">
 <div class="row"><span class="muted">Admin login</span><b>{{ $info['email'] }}</b></div>
 <div class="row"><span class="muted">Installer files</span><b class="{{ $info['deletable'] ? 'ok' : 'warn' }}">{{ $info['deletable'] ? 'Removed automatically' : 'Please delete routes/install.php manually' }}</b></div>
-<div class="actions"><a class="btn ghost" href="{{ url('/') }}">View store</a><a class="btn" href="{{ url('admin') }}">Open admin →</a></div></div>
+<div class="actions"><a class="btn ghost" href="{{ url('/') }}">View store</a><a class="btn" href="{{ url('login') }}">Sign in →</a></div></div>
 @endif
 </div></body></html>

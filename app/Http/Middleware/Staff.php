@@ -11,7 +11,9 @@ class Staff
     public function handle(Request $request, Closure $next)
     {
         if (! Auth::user()?->isStaff()) {
-            return $request->expectsJson() ? response()->json(['ok' => false, 'error' => 'Not signed in'], 401) : redirect('/admin/login');
+            // The panel has no login page of its own: staff sign in through the normal customer login.
+            if ($request->expectsJson()) return response()->json(['ok' => false, 'error' => 'Not signed in'], 401);
+            abort(404);
         }
         $response = $next($request);
         $response->headers->set('X-Robots-Tag', 'noindex');
