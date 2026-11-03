@@ -37,4 +37,3 @@ Thumbs.db
 /public/uploads/products/*
 /public/uploads/site/*
 !/public/uploads/*/.gitkeep
-/release/site.zip
