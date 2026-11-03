@@ -120,18 +120,24 @@ final class Cart
         $coupon = null;
         $couponError = null;
         $discount = 0;
+        $auto = false;
+        $uid = auth()->id();
+        $mail = auth()->user()?->email;
+        $live = array_values(array_filter($lines, fn ($x) => ! $x['sold_out']));
         if (! empty($c['coupon'])) {
-            [$coupon, $couponError] = Coupons::check($c['coupon'], $subtotal);
-            if ($coupon) {
-                $discount = Coupons::amount($coupon, $subtotal);
-            } else {
-                $c['coupon'] = null;
-            }
+            [$coupon, $couponError] = Coupons::check($c['coupon'], $subtotal, $live, $mail, $uid);
+            if (! $coupon) $c['coupon'] = null;
         }
+        if (! $coupon && $live) {
+            $coupon = Coupons::auto($subtotal, $live, $mail, $uid);
+            $auto = (bool) $coupon;
+        }
+        if ($coupon) $discount = Coupons::amount($coupon, $subtotal, $live);
         self::save($c);
 
         $freeMin = (int) setting('free_shipping_min', 0);
-        $shipping = $hasPhysical ? (($freeMin > 0 && $physical >= $freeMin) ? 0 : (int) setting('shipping_flat', 0)) : 0;
+        $freeShip = $coupon && $coupon->free_shipping;
+        $shipping = $hasPhysical ? (($freeShip || ($freeMin > 0 && $physical >= $freeMin)) ? 0 : (int) setting('shipping_flat', 0)) : 0;
         $rate = (float) setting('tax_rate', 0);
         $tax = $rate > 0 ? (int) round(max(0, $subtotal - $discount) * $rate / 100) : 0;
 
@@ -140,12 +146,39 @@ final class Cart
             'physical' => $physical, 'digital' => $digital, 'subtotal' => $subtotal, 'discount' => $discount,
             'shipping' => $shipping, 'tax' => $tax, 'total' => max(0, $subtotal - $discount + $shipping + $tax),
             'has_physical' => $hasPhysical, 'only_digital' => ! $hasPhysical && $lines !== [],
-            'coupon' => $coupon, 'coupon_error' => $couponError,
+            'coupon' => $coupon, 'coupon_error' => $couponError, 'coupon_auto' => $auto, 'free_ship_coupon' => (bool) $freeShip,
             'free_min' => $freeMin,
             'free_pct' => ($hasPhysical && $freeMin > 0) ? min(100, (int) floor($physical / $freeMin * 100)) : 100,
             'free_left' => max(0, $freeMin - $physical),
             'has_sold_out' => (bool) array_filter($lines, fn ($x) => $x['sold_out']),
         ];
+    }
+
+    /** Replace the whole cart (used by abandoned-cart recovery links). */
+    public static function restore(array $lines, ?string $coupon = null): void
+    {
+        $out = [];
+        foreach ($lines as $k => $l) {
+            $p = Catalog::byId((int) ($l['pid'] ?? 0));
+            if (! $p || $p->available() <= 0) continue;
+            $out[$k] = ['pid' => $p->id, 'qty' => max(1, min((int) $l['qty'], $p->available(), 99)), 'opts' => (array) ($l['opts'] ?? [])];
+        }
+        self::save(['lines' => $out, 'coupon' => $coupon ? strtoupper($coupon) : null]);
+    }
+
+    public static function raw(): array
+    {
+        return self::data();
+    }
+
+    /** Free-delivery progress for the sitewide bar. */
+    public static function freeBar(): array
+    {
+        $min = (int) setting('free_shipping_min', 0);
+        $sum = self::summary();
+        $left = max(0, $min - $sum['physical']);
+
+        return ['min' => $min, 'left' => $left, 'pct' => $min > 0 ? min(100, (int) floor($sum['physical'] / $min * 100)) : 0, 'unlocked' => $min > 0 && $sum['physical'] >= $min, 'empty' => $sum['physical'] === 0, 'left_txt' => money($left), 'min_txt' => money($min)];
     }
 
     public static function optLabel(array $opts): string

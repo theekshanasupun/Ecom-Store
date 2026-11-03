@@ -33,7 +33,8 @@ class Pages extends Controller
 
             return redirect($id ? "/admin/pages/$id" : '/admin/pages/new');
         }
-        $data = ['title' => $title, 'body' => (string) $r->input('body'), 'status' => $r->input('status') === 'draft' ? 'draft' : 'published', 'in_footer' => $r->boolean('in_footer')];
+        $data = ['title' => $title, 'body' => (string) $r->input('body'), 'status' => $r->input('status') === 'draft' ? 'draft' : 'published', 'in_footer' => $r->boolean('in_footer'),
+            'seo_title' => mb_substr(trim((string) $r->input('seo_title')), 0, 190), 'seo_description' => mb_substr(trim((string) $r->input('seo_description')), 0, 320), 'seo_noindex' => $r->boolean('seo_noindex')];
         $slugBase = trim((string) $r->input('slug')) ?: $title;
         $data['slug'] = unique_slug(Page::class, $slugBase, $id ?: null);
         $id ? Page::whereKey($id)->update($data) : Page::create($data);

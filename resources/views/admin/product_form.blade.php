@@ -72,6 +72,7 @@ $isPool = $p && in_array($p['type'], ['key', 'account'], true);
         <?= field_select('art', 'Illustration', ['' => 'Automatic'] + $arts, $v('art')) ?>
         <label class="fld"><span>Illustration colour</span><input type="color" name="art_color" value="<?= e($v('art_color') ?: '#7a62ff') ?>"></label>
       </section>
+      <?= partial('admin/_seo_fields', ['o' => $p]) ?>
     </div>
   </div>
 </form>

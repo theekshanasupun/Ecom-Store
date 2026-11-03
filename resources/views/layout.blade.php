@@ -9,7 +9,8 @@ $step = (int) ($meta['step'] ?? 0);
 $path = '/' . ltrim(request()->path(), '/');
 $name = (string) setting('store_name', 'KIOSK');
 $pageTitle = ($meta['title'] ?? '') ?: $name;
-$fullTitle = str_contains($pageTitle, $name) ? $pageTitle : $pageTitle . ' — ' . $name;
+$isHome = !empty($meta['home']);
+$fullTitle = \App\Support\Seo::title($pageTitle, $isHome);
 $cartCount = Cart::count();
 $accent = preg_match('/^#[0-9a-f]{6}$/i', (string) setting('accent')) ? setting('accent') : '#c6ff3d';
 $pagesFooter = \App\Models\Page::where('status', 'published')->where('in_footer', true)->orderBy('id')->get(['title', 'slug'])->all();
@@ -23,15 +24,44 @@ $pagesFooter = \App\Models\Page::where('status', 'published')->where('in_footer'
 <meta name="theme-color" content="#0b0b0d">
 <meta property="og:title" content="<?= e($pageTitle) ?>">
 <meta property="og:site_name" content="<?= e($name) ?>">
-<?php if (!empty($meta['og_image'])): ?><meta property="og:image" content="<?= e($meta['og_image']) ?>"><?php endif; ?>
-<link rel="icon" href="data:image/svg+xml,<?= rawurlencode('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="9" fill="#0b0b0d"/><circle cx="16" cy="16" r="7" fill="' . $accent . '"/></svg>') ?>">
+<?php if (setting('favicon')): ?><link rel="icon" href="<?= e(upload_url(setting('favicon'))) ?>"><link rel="apple-touch-icon" href="<?= e(upload_url(setting('favicon'))) ?>"><?php else: ?><link rel="icon" href="data:image/svg+xml,<?= rawurlencode('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="9" fill="#0b0b0d"/><circle cx="16" cy="16" r="7" fill="' . $accent . '"/></svg>') ?>"><?php endif; ?>
+<?= \App\Support\Seo::head($meta, $pageTitle, $isHome) ?>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Mono:wght@400;700&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="<?= e(asset_v('css/store.css')) ?>">
 <style>:root{--accent:<?= e($accent) ?>;--accent-ink:<?= e(\App\Support\Art::ink($accent)) ?>}</style>
 </head>
 <body class="<?= $step ? 'is-checkout' : '' ?>">
+<?= \App\Support\Seo::bodyStart() ?>
 <a class="skip" href="#main">Skip to content</a>
+<?php
+$annLines = array_values(array_filter(array_map('trim', preg_split('/\R/', (string) setting('announce_text')))));
+$annOk = setting('announce_on') === '1' && $annLines && !$step
+    && (!setting('announce_start') || strtotime((string) setting('announce_start')) <= time())
+    && (!setting('announce_end') || strtotime((string) setting('announce_end')) + 86399 >= time());
+if ($annOk):
+  $annStyle = in_array(setting('announce_style'), ['static', 'rotate', 'marquee'], true) ? setting('announce_style') : 'static';
+  $annBg = preg_match('/^#[0-9a-f]{6}$/i', (string) setting('announce_bg')) ? setting('announce_bg') : '#c6ff3d';
+  $annFg = preg_match('/^#[0-9a-f]{6}$/i', (string) setting('announce_fg')) ? setting('announce_fg') : '#0b0b0d';
+  $annLink = trim((string) setting('announce_link'));
+  $annHref = $annLink === '' ? '' : (preg_match('#^(https?:)?//#i', $annLink) ? $annLink : url(ltrim($annLink, '/')));
+  if (preg_match('/^\s*(javascript|data):/i', $annLink)) $annHref = '';
+?>
+<div class="annbar ann-<?= e($annStyle) ?>" id="annbar" data-key="<?= e(substr(md5(implode('|', $annLines)), 0, 10)) ?>" data-close="<?= setting('announce_close') === '1' ? '1' : '0' ?>" style="background:<?= e($annBg) ?>;color:<?= e($annFg) ?>" role="region" aria-label="Announcement">
+  <div class="ann-track"><?php foreach (($annStyle === 'static' ? [$annLines[0]] : $annLines) as $i => $ln): ?><span class="ann-msg<?= $i === 0 ? ' on' : '' ?>"><?php if ($annHref): ?><a href="<?= e($annHref) ?>" style="color:inherit"><?= e($ln) ?></a><?php else: ?><?= e($ln) ?><?php endif; ?></span><?php endforeach; ?></div>
+  <?php if (setting('announce_close') === '1'): ?><button type="button" class="ann-x" aria-label="Dismiss" style="color:inherit">✕</button><?php endif; ?>
+</div>
+<?php endif; ?>
+<?php if (setting('fd_on') === '1' && (int) setting('free_shipping_min') > 0 && !$step):
+  $fb = Cart::freeBar();
+  $fdt = fn ($t) => strtr((string) $t, ['{amount}' => $fb['left_txt'], '{min}' => $fb['min_txt']]);
+  $fdText = $fb['empty'] ? $fdt(setting('fd_text_empty')) : ($fb['unlocked'] ? $fdt(setting('fd_text_done')) : $fdt(setting('fd_text_progress')));
+  $col = fn ($k, $d) => preg_match('/^#[0-9a-f]{6}$/i', (string) setting($k)) ? setting($k) : $d;
+?>
+<div class="fdbar" id="fdbar" style="background:<?= e($col('fd_bg', '#141418')) ?>;color:<?= e($col('fd_fg', '#f3f1ec')) ?>;--fdc:<?= e($col('fd_bar', '#c6ff3d')) ?>" data-tpl-progress="<?= e(setting('fd_text_progress')) ?>" data-tpl-done="<?= e(setting('fd_text_done')) ?>" data-tpl-empty="<?= e(setting('fd_text_empty')) ?>">
+  <span class="fd-txt"><?= e($fdText) ?></span><span class="fd-track"><i style="width:<?= $fb['empty'] ? 0 : $fb['pct'] ?>%"></i></span>
+</div>
+<?php endif; ?>
 <?php if (setting('ticker_enabled') === '1' && trim((string) setting('ticker')) !== '' && !$step): ?>
 <div class="ticker" aria-hidden="true"><div class="ticker-track"><?php $t = strtoupper((string) setting('ticker')); $t = preg_replace('/\s*·\s*/', ' &nbsp;·&nbsp; ', e($t)); for ($i = 0; $i < 4; $i++) echo '<span>' . $t . ' &nbsp;·&nbsp; </span>'; ?></div></div>
 <?php endif; ?>
@@ -51,10 +81,21 @@ $pagesFooter = \App\Models\Page::where('status', 'published')->where('in_footer'
     <?php foreach ($cats as $c): $on = $path === '/shop/' . $c['slug']; ?>
       <a href="<?= e(url('shop/' . $c['slug'])) ?>" class="<?= $on ? 'on' : '' ?>" style="--c:<?= e($c['color']) ?>"><?= e($c['name']) ?></a>
     <?php endforeach; ?>
+    <a class="mob-only" href="<?= e(url($user ? 'account' : 'login')) ?>"><?= $user ? 'My account' : 'Sign in' ?></a>
+    <?php if ($user && $user->isStaff()): ?><a class="mob-only" href="<?= e(url('admin')) ?>">Admin panel</a><?php endif; ?>
   </nav>
   <div class="hdr-actions">
     <button class="icon-btn" id="search-open" aria-label="Search"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></button>
-    <a class="icon-btn desk" href="<?= e(url($user ? 'account' : 'login')) ?>" aria-label="Account"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/></svg></a>
+    <?php if ($user): ?>
+    <details class="acct desk" id="acct"><summary class="icon-btn" aria-label="Account menu"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/></svg></summary>
+      <div class="acct-menu"><b><?= e($user->name) ?></b><small><?= e($user->email) ?></small>
+        <a href="<?= e(url('account')) ?>">My account &amp; orders</a>
+        <?php if ($user->isStaff()): ?><a class="acct-admin" href="<?= e(url('admin')) ?>">Admin panel →</a><?php endif; ?>
+        <form method="post" action="<?= e(url('logout')) ?>"><?= csrf_field() ?><button type="submit">Sign out</button></form>
+      </div></details>
+    <?php else: ?>
+    <a class="icon-btn desk" href="<?= e(url('login')) ?>" aria-label="Sign in"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/></svg></a>
+    <?php endif; ?>
     <button class="cart-btn" id="cart-open" aria-label="Open cart">Cart <span class="count" data-cart-count><?= $cartCount ?></span></button>
     <button class="icon-btn burger" id="burger" aria-label="Menu"><span></span><span></span></button>
   </div>
@@ -94,6 +135,7 @@ $pagesFooter = \App\Models\Page::where('status', 'published')->where('in_footer'
   </div>
 </div>
 <div class="toasts" id="toasts" aria-live="polite"></div>
+<?= \App\Support\Popups::render(request()) ?>
 
 <script>window.KIOSK={base:<?= json_encode('') ?>,csrf:<?= json_encode(csrf_token()) ?>};</script>
 <script src="<?= e(asset_v('js/store.js')) ?>" defer></script>

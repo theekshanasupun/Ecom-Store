@@ -6,5 +6,6 @@
     <label class="fld"><span>Password (8+ characters)</span><input type="password" name="password" required autocomplete="new-password"></label>
     <button class="btn btn-block">Create account →</button>
     <p class="muted small">Already have one? <a href="<?= e(url('login')) ?>">Sign in</a></p>
+    <?= partial('partials/social_buttons') ?>
   </form>
 </section>

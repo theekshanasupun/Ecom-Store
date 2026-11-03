@@ -31,6 +31,7 @@ class Account extends Controller
             RateLimiter::clear($key);
             $r->session()->regenerate();
             Auth::user()->update(['last_login_at' => now()]);
+            \App\Support\Marketing::trackCart();
 
             return redirect()->intended('/account');
         }
@@ -69,6 +70,8 @@ class Account extends Controller
         Order::where('email', $email)->whereNull('user_id')->update(['user_id' => $u->id]);
         Auth::login($u);
         $r->session()->regenerate();
+        \App\Support\Marketing::subscribe($email, $name, 'auto');
+        \App\Support\Marketing::trackCart();
         flash('success', 'Welcome aboard, '.explode(' ', $name)[0].'!');
 
         return redirect()->intended('/account');

@@ -2,6 +2,7 @@
 <section class="block narrow-top">
   <p class="eyebrow lime">My account</p>
   <h1 class="h1">Hi, <?= e(explode(' ', $u['name'])[0]) ?></h1>
+  <?php if ($u->isStaff()): ?><p><a class="btn" href="<?= e(url('admin')) ?>">Open admin panel →</a></p><?php endif; ?>
   <div class="order-grid">
     <div class="order-main">
       <h2 class="h3">Orders</h2>

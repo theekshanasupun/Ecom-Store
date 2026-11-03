@@ -28,6 +28,27 @@ final class Settings
             'smtp_host' => '', 'smtp_port' => '587', 'smtp_enc' => 'tls', 'smtp_user' => '', 'smtp_pass' => '',
             'notify_admin' => '1', 'maintenance' => '0', 'logo' => '', 'update_history' => '[]',
             'social_instagram' => '', 'social_x' => '', 'social_tiktok' => '',
+            // branding
+            'favicon' => '',
+            // upper banner bar + free delivery bar
+            'announce_on' => '0', 'announce_text' => "Welcome to our store · New arrivals every week", 'announce_link' => '', 'announce_style' => 'static',
+            'announce_bg' => '#c6ff3d', 'announce_fg' => '#0b0b0d', 'announce_close' => '1', 'announce_start' => '', 'announce_end' => '',
+            'fd_on' => '0', 'fd_text_progress' => "You're {amount} away from free delivery", 'fd_text_done' => 'You have unlocked free delivery!',
+            'fd_text_empty' => 'Free delivery on orders over {min}', 'fd_bg' => '#141418', 'fd_fg' => '#f3f1ec', 'fd_bar' => '#c6ff3d', 'fd_in_drawer' => '1', 'fd_sticky' => '0',
+            // SEO
+            'seo_title_tpl' => '{title} — {site}', 'seo_home_title' => '', 'seo_keywords' => '', 'seo_og_image' => '', 'seo_twitter' => '',
+            'seo_noindex_site' => '0', 'seo_robots_extra' => '', 'seo_google_verify' => '', 'seo_bing_verify' => '', 'seo_pinterest_verify' => '',
+            'ga4_id' => '', 'gtm_id' => '', 'fb_pixel' => '', 'seo_head_code' => '', 'seo_body_code' => '',
+            'seo_schema_org' => '1', 'seo_schema_product' => '1', 'seo_schema_search' => '1', 'seo_breadcrumbs' => '1', 'seo_canonical' => '1',
+            'seo_ai_allow' => '1', 'seo_llms_on' => '1', 'seo_llms_extra' => '',
+            // GEO / local
+            'geo_on' => '0', 'geo_type' => 'Store', 'geo_name' => '', 'geo_street' => '', 'geo_city' => '', 'geo_region' => '', 'geo_postal' => '',
+            'geo_country' => '', 'geo_lat' => '', 'geo_lng' => '', 'geo_hours' => '', 'geo_price_range' => '', 'geo_areas' => '', 'geo_same_as' => '',
+            // social login
+            'login_google_on' => '0', 'google_id' => '', 'google_secret' => '', 'login_facebook_on' => '0', 'facebook_id' => '', 'facebook_secret' => '',
+            'login_github_on' => '0', 'github_id' => '', 'github_secret' => '', 'login_discord_on' => '0', 'discord_id' => '', 'discord_secret' => '',
+            // page builder / popups / automations
+            'home_use_builder' => '0', 'home_builder' => '[]', 'popups_on' => '1', 'automations_autorun' => '1', 'automations_last_run' => '',
         ];
     }
 

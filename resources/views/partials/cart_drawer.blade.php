@@ -10,7 +10,7 @@ if (!$sum['lines']): ?>
     <a class="btn" href="<?= e(url('')) ?>">Start shopping</a>
   </div>
 <?php else: ?>
-  <?php if ($sum['has_physical'] && $sum['free_min'] > 0): ?>
+  <?php if ($sum['has_physical'] && $sum['free_min'] > 0 && setting('fd_in_drawer') !== '0'): ?>
   <div class="ship-meter">
     <div class="ship-line"><span><?= $sum['free_left'] > 0 ? 'Add ' . money($sum['free_left']) . ' more for free shipping' : 'Free shipping unlocked' ?></span><b><?= $sum['free_pct'] ?>%</b></div>
     <div class="bar"><i style="width:<?= $sum['free_pct'] ?>%"></i></div>

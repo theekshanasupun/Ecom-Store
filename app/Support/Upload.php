@@ -16,9 +16,14 @@ final class Upload
         if (! $f || ! $f->isValid()) return null;
         if ($f->getSize() > $maxMb * 1048576) throw new \RuntimeException("Image is larger than {$maxMb}MB.");
         $ext = strtolower($f->getClientOriginalExtension());
-        if (! in_array($ext, self::IMG, true)) throw new \RuntimeException('Only JPG, PNG, WEBP or GIF images are allowed.');
-        $info = @getimagesize($f->getRealPath());
-        if (! $info) throw new \RuntimeException('That file is not a valid image.');
+        if ($ext === 'ico' && $dir === 'site') {
+            // favicon: verify the ICO header (00 00 01 00)
+            if (@file_get_contents($f->getRealPath(), false, null, 0, 4) !== "\x00\x00\x01\x00") throw new \RuntimeException('That file is not a valid .ico icon.');
+        } else {
+            if (! in_array($ext, self::IMG, true)) throw new \RuntimeException('Only JPG, PNG, WEBP or GIF images are allowed.');
+            $info = @getimagesize($f->getRealPath());
+            if (! $info) throw new \RuntimeException('That file is not a valid image.');
+        }
         $path = public_path('uploads/'.$dir);
         File::ensureDirectoryExists($path);
         $name = date('ym').'-'.Str::lower(Str::random(16)).'.'.($ext === 'jpeg' ? 'jpg' : $ext);
