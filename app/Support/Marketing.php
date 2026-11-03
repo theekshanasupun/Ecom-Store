@@ -3,7 +3,9 @@
 namespace App\Support;
 
 use App\Models\Automation;
+use App\Models\AutomationQueue;
 use App\Models\EmailLog;
+use App\Models\Newsletter;
 use App\Models\Order;
 use App\Models\SavedCart;
 use App\Models\Subscriber;
@@ -43,12 +45,15 @@ final class Marketing
         if (! filter_var($email, FILTER_VALIDATE_EMAIL)) return null;
         $s = Subscriber::where('email', $email)->first();
         if ($s) {
-            if ($s->status === 'unsubscribed' && $source !== 'auto') $s->update(['status' => 'subscribed']);
+            if ($s->status === 'unsubscribed' && ! in_array($source, ['auto', 'footer', 'checkout'], true)) $s->update(['status' => 'subscribed']);
 
             return $s;
         }
 
-        return Subscriber::create(['email' => $email, 'name' => $name, 'source' => $source, 'status' => 'subscribed', 'token' => Str::random(32)]);
+        $new = Subscriber::create(['email' => $email, 'name' => $name, 'source' => $source, 'status' => 'subscribed', 'token' => Str::random(32)]);
+        Triggers::fire('subscriber.added', ['email' => $email, 'name' => (string) $name, 'ref' => 'sub'.$new->id]);
+
+        return $new;
     }
 
     public static function optedOut(string $email): bool
@@ -152,6 +157,7 @@ final class Marketing
     /** Subject + wrapped HTML for an automation. */
     public static function compose(Automation $a, array $ctx): array
     {
+        if ($a->hasDesign()) return self::composeDesigned($a, $ctx);
         $email = (string) ($ctx['email'] ?? '');
         $name = (string) ($ctx['name'] ?? '');
         $first = trim(explode(' ', $name)[0]) ?: 'there';
@@ -241,7 +247,120 @@ final class Marketing
                 if (self::dispatch($a, $o->email, 'w'.$o->oid, ['name' => $o->nm])) $sent++;
             }
         }
+        if ($left()) $sent += self::processQueue($limit - $sent);
+        $sent += self::sendNewsletters(40);
         Settings::set('automations_last_run', now()->toDateTimeString());
+
+        return $sent;
+    }
+
+
+    /* ------------------------------------------------------------ designed emails (v2.6) */
+
+    /** Render a designed (block based) email for a system automation. */
+    private static function composeDesigned(Automation $a, array $ctx): array
+    {
+        $step = $a->steps()[0] ?? ['blocks' => []];
+        $vars = EmailBlocks::vars($ctx + ['coupon' => (string) $a->coupon_code, 'order_total' => $ctx['total'] ?? null, 'cart_url' => $ctx['cart_url'] ?? url('cart')]);
+        $subject = html_entity_decode(strip_tags(self::render((string) $a->subject, array_map(fn ($v) => (string) $v, array_diff_key($vars, array_flip(['cart_items', 'cart_button']))))));
+        $html = EmailBlocks::render((array) $step['blocks'], $vars, ['subject' => $subject, 'preheader' => (string) ($step['preheader'] ?? $a->preheader), 'footer' => true]);
+
+        return [$subject, $html];
+    }
+
+    /** Subject + html for one step of a custom automation. */
+    public static function composeStep(Automation $a, array $step, array $payload, string $email, string $name): array
+    {
+        $vars = EmailBlocks::vars(['email' => $email, 'name' => $name, 'coupon' => (string) $a->coupon_code] + $payload);
+        $plain = array_diff_key($vars, array_flip(['cart_items', 'cart_button']));
+        $subject = trim(html_entity_decode(strip_tags(self::render((string) ($step['subject'] ?? ''), array_map(fn ($v) => (string) $v, $plain))))) ?: (string) $a->name;
+        $blocks = (array) ($step['blocks'] ?? []);
+        if (! $blocks) $blocks = [['type' => 'text', 'props' => ['body' => (string) $a->body ?: 'Hi {first_name},'], 'style' => []]];
+        $html = EmailBlocks::render($blocks, $vars, ['subject' => $subject, 'preheader' => (string) ($step['preheader'] ?? ''), 'footer' => ! str_starts_with((string) $a->trigger_event, 'order.')]);
+
+        return [$subject, $html];
+    }
+
+    /** Send due rows of the custom automation queue. */
+    public static function processQueue(int $limit = 25): int
+    {
+        $sent = 0;
+        try {
+            $rows = AutomationQueue::where('status', 'pending')->where('run_at', '<=', now())->orderBy('run_at')->limit(max(1, $limit))->get();
+        } catch (\Throwable) {
+            return 0;
+        }
+        foreach ($rows as $r) {
+            $a = Automation::find($r->automation_id);
+            if (! $a || ! $a->enabled) { $r->update(['status' => 'skipped', 'error' => 'Automation off or deleted']); continue; }
+            $transactional = str_starts_with((string) $a->trigger_event, 'order.');
+            if (! $transactional && self::optedOut($r->email)) { $r->update(['status' => 'skipped', 'error' => 'Unsubscribed']); continue; }
+            $step = $a->steps()[$r->step] ?? null;
+            if (! $step) { $r->update(['status' => 'skipped', 'error' => 'Step removed']); continue; }
+            [$subject, $html] = self::composeStep($a, $step, $r->payloadArray(), $r->email, (string) $r->name);
+            $ok = Mailer::send($r->email, $subject, $html);
+            $r->update(['status' => $ok ? 'sent' : 'failed', 'sent_at' => $ok ? now() : null, 'error' => $ok ? null : 'Mailer failed — check Settings → Email']);
+            try {
+                EmailLog::create(['automation' => 'auto-'.$a->id, 'email' => $r->email, 'ref' => 'q'.$r->id, 'subject' => Str::limit($subject, 180, ''), 'ok' => $ok, 'created_at' => now()]);
+            } catch (\Throwable) {
+            }
+            if ($ok) { $a->increment('sent'); $sent++; }
+        }
+
+        return $sent;
+    }
+
+    /** Send the next batch of every newsletter that is sending or due. */
+    public static function sendNewsletters(int $batch = 40): int
+    {
+        $n = 0;
+        try {
+            Newsletter::where('status', 'scheduled')->where('scheduled_at', '<=', now())->get()->each(fn ($nl) => self::startNewsletter($nl));
+            foreach (Newsletter::where('status', 'sending')->orderBy('id')->get() as $nl) $n += self::newsletterBatch($nl, $batch);
+        } catch (\Throwable $e) {
+            \Log::debug('newsletters: '.$e->getMessage());
+        }
+
+        return $n;
+    }
+
+    public static function startNewsletter(Newsletter $nl): void
+    {
+        $nl->update(['status' => 'sending', 'recipients' => (clone $nl->audience())->count(), 'sent' => 0, 'failed' => 0, 'last_id' => 0]);
+    }
+
+    /** Subject + html of a newsletter for one recipient. */
+    public static function composeNewsletter(Newsletter $nl, string $email, string $name = ''): array
+    {
+        $vars = EmailBlocks::vars(['email' => $email, 'name' => $name]);
+        $subject = trim(html_entity_decode(strip_tags(self::render((string) $nl->subject, array_map(fn ($v) => (string) $v, array_diff_key($vars, array_flip(['cart_items', 'cart_button']))))))) ?: (string) $nl->name;
+
+        return [$subject, EmailBlocks::render($nl->blocks(), $vars, ['subject' => $subject, 'preheader' => (string) $nl->preheader, 'footer' => true])];
+    }
+
+    public static function newsletterBatch(Newsletter $nl, int $batch = 40): int
+    {
+        $nl->refresh();
+        if ($nl->status !== 'sending') return 0;
+        $subs = $nl->audience()->where('id', '>', $nl->last_id)->orderBy('id')->limit($batch)->get();
+        $sent = $failed = 0;
+        foreach ($subs as $s) {
+            [$subject, $html] = self::composeNewsletter($nl, $s->email, (string) $s->name);
+            $ok = Mailer::send($s->email, $subject, $html);
+            $ok ? $sent++ : $failed++;
+            try {
+                EmailLog::create(['automation' => 'nl-'.$nl->id, 'email' => $s->email, 'ref' => 'n', 'subject' => Str::limit($subject, 180, ''), 'ok' => $ok, 'created_at' => now()]);
+            } catch (\Throwable) {
+            }
+            $nl->last_id = $s->id;
+        }
+        $nl->sent += $sent;
+        $nl->failed += $failed;
+        if ($subs->count() < $batch) {
+            $nl->status = 'sent';
+            $nl->sent_at = now();
+        }
+        $nl->save();
 
         return $sent;
     }

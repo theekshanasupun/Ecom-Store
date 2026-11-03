@@ -67,13 +67,7 @@ class Products extends Controller
             return redirect($back);
         }
         $type = isset(Product::TYPES[$r->input('type')]) ? $r->input('type') : 'physical';
-        $opts = [];
-        foreach (preg_split('/\R/', (string) $r->input('options_text', '')) as $line) {
-            if (! str_contains($line, ':')) continue;
-            [$n, $v] = explode(':', $line, 2);
-            $vals = array_values(array_unique(array_filter(array_map('trim', explode(',', $v)))));
-            if (trim($n) !== '' && $vals) $opts[] = ['name' => trim($n), 'values' => $vals];
-        }
+        [$opts, $variants] = $this->parseVariants($r);
         $s = fn ($k, $l = 250) => mb_substr(trim((string) $r->input($k)), 0, $l);
         $data = [
             'category_id' => (int) $r->input('category_id'), 'name' => $name, 'tagline' => $s('tagline'),
@@ -81,7 +75,7 @@ class Products extends Controller
             'price' => to_cents($r->input('price', 0)), 'compare_price' => to_cents($r->input('compare_price', 0)),
             'stock' => max(0, (int) $r->input('stock')), 'unlimited' => $r->boolean('unlimited'), 'sku' => $s('sku', 80),
             'art' => $s('art', 20), 'art_color' => preg_match('/^#[0-9a-fA-F]{6}$/', (string) $r->input('art_color')) ? $r->input('art_color') : '',
-            'badge' => $s('badge', 30), 'tags' => $s('tags'), 'options' => $opts ? json_encode($opts, JSON_UNESCAPED_UNICODE) : '',
+            'badge' => $s('badge', 30), 'tags' => $s('tags'), 'options' => $opts ? json_encode($opts, JSON_UNESCAPED_UNICODE) : '', 'variants' => $variants ? json_encode($variants, JSON_UNESCAPED_UNICODE) : '',
             'details' => (string) $r->input('details'), 'delivery_note' => $s('delivery_note'),
             'seo_title' => mb_substr(trim((string) $r->input('seo_title')), 0, 190), 'seo_description' => mb_substr(trim((string) $r->input('seo_description')), 0, 320), 'seo_noindex' => $r->boolean('seo_noindex'),
             'featured' => $r->boolean('featured'), 'status' => $r->input('status') === 'draft' ? 'draft' : 'active',
@@ -126,6 +120,55 @@ class Products extends Controller
         flash('success', 'Product saved'.($n ? " · $n keys added" : '').'.');
 
         return redirect('/admin/products/'.$id);
+    }
+
+    /**
+     * Options + variants from the v2.6 editor (options_json / variants_json). Falls back to the legacy
+     * "Name: a, b" textarea so old forms and API-style posts keep working.
+     * @return array{0:array,1:array}
+     */
+    private function parseVariants(Request $r): array
+    {
+        $opts = [];
+        $raw = json_decode((string) $r->input('options_json', ''), true);
+        if (is_array($raw)) {
+            foreach (array_slice($raw, 0, 3) as $o) {
+                $name = mb_substr(trim((string) ($o['name'] ?? '')), 0, 40);
+                $vals = array_values(array_unique(array_filter(array_map(fn ($x) => mb_substr(trim((string) $x), 0, 60), (array) ($o['values'] ?? [])), fn ($x) => $x !== '')));
+                if ($name === '' || ! $vals) continue;
+                $type = isset(Product::OPTION_TYPES[$o['type'] ?? '']) ? $o['type'] : 'button';
+                $colors = [];
+                if ($type === 'color') foreach ((array) ($o['colors'] ?? []) as $k => $hex) if (in_array($k, $vals, true) && preg_match('/^#[0-9a-fA-F]{6}$/', (string) $hex)) $colors[$k] = strtolower($hex);
+                $opts[] = ['name' => $name, 'type' => $type, 'values' => $vals] + ($colors ? ['colors' => $colors] : []);
+            }
+        } else {
+            foreach (preg_split('/\R/', (string) $r->input('options_text', '')) as $line) {
+                if (! str_contains($line, ':')) continue;
+                [$n, $v] = explode(':', $line, 2);
+                $vals = array_values(array_unique(array_filter(array_map('trim', explode(',', $v)))));
+                if (trim($n) !== '' && $vals) $opts[] = ['name' => trim($n), 'values' => $vals];
+            }
+        }
+        $variants = [];
+        $vraw = json_decode((string) $r->input('variants_json', ''), true);
+        if ($opts && is_array($vraw)) {
+            $names = array_column($opts, 'name');
+            $valid = array_column($opts, 'values', 'name');
+            foreach (array_slice($vraw, 0, 300) as $v) {
+                $o = [];
+                foreach ($names as $n) {
+                    $val = $v['opts'][$n] ?? null;
+                    if (! is_string($val) || ! in_array($val, $valid[$n], true)) continue 2;
+                    $o[$n] = $val;
+                }
+                $num = fn ($x) => ($x === null || $x === '') ? null : max(0, to_cents($x));
+                $variants[] = ['key' => implode('|', $o), 'opts' => $o, 'price' => $num($v['price'] ?? null), 'compare' => $num($v['compare'] ?? null),
+                    'stock' => ($v['stock'] ?? '') === '' || ($v['stock'] ?? null) === null ? null : max(0, (int) $v['stock']), 'sku' => mb_substr(trim((string) ($v['sku'] ?? '')), 0, 80),
+                    'image' => preg_match('#^[A-Za-z0-9/_\-.]+$#', (string) ($v['image'] ?? '')) ? (string) $v['image'] : '', 'active' => ! isset($v['active']) || (bool) $v['active']];
+            }
+        }
+
+        return [$opts, $variants];
     }
 
     private function storeKeys(int $pid, string $text): int

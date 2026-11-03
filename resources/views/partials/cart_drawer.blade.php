@@ -19,7 +19,7 @@ if (!$sum['lines']): ?>
   <ul class="dlines">
   <?php foreach ($sum['lines'] as $l): $p = $l['p']; ?>
     <li class="dline" style="--c:<?= e($p['color']) ?>">
-      <a class="dthumb" href="<?= e(url('product/' . $p['slug'])) ?>"><?= Catalog::media($p, false) ?></a>
+      <a class="dthumb" href="<?= e(url($p['slug'] ? 'product/' . $p['slug'] : 'gift-cards')) ?>"><?= Catalog::media($p, false) ?></a>
       <div class="dinfo">
         <b><?= e($p['name']) ?></b>
         <small><?= e(Cart::optLabel($l['opts']) ?: $p['tagline']) ?></small>
@@ -30,12 +30,13 @@ if (!$sum['lines']): ?>
           <button type="button" data-cart="set" data-key="<?= e($l['key']) ?>" data-qty="<?= $l['qty'] + 1 ?>" aria-label="Increase">+</button>
         </div>
       </div>
-      <div class="dprice"><?= money($l['total']) ?><button type="button" class="lnk" data-cart="remove" data-key="<?= e($l['key']) ?>">Remove</button></div>
+      <div class="dprice"><?= money($l['total']) ?><?php if (!empty($l['orig']) && $l['orig'] > $l['unit'] && $l['qty'] > 0): ?><s><?= money($l['orig'] * $l['qty']) ?></s><?php endif; ?><button type="button" class="lnk" data-cart="remove" data-key="<?= e($l['key']) ?>">Remove</button></div>
     </li>
   <?php endforeach; ?>
   </ul>
   <div class="dfoot">
-    <div class="dtotal"><span>Subtotal</span><b><?= money($sum['subtotal']) ?></b></div>
+    <?php if ($sum['savings'] + $sum['offer_discount'] > 0): ?><div class="saving-pill sm"><span>✦</span> Saving <b><?= money($sum['savings'] + $sum['offer_discount']) ?></b></div><?php endif; ?>
+    <div class="dtotal"><span>Subtotal</span><b><?= money($sum['subtotal'] - $sum['offer_discount']) ?></b></div>
     <small class="muted">Shipping &amp; tax calculated at checkout.</small>
     <a class="btn btn-block" href="<?= e(url('checkout')) ?>">Checkout →</a>
     <a class="btn btn-ghost btn-block" href="<?= e(url('cart')) ?>">View full cart</a>

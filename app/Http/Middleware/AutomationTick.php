@@ -24,6 +24,7 @@ class AutomationTick
             if (setting('automations_autorun') !== '1') return;
             if (! Cache::add('kiosk.automation.tick', 1, 300)) return;
             \App\Support\Marketing::runDue(8);
+            \App\Services\GiftCards::sendDue(10);
         } catch (\Throwable $e) {
             \Log::debug('automation tick: '.$e->getMessage());
         }

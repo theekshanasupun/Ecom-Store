@@ -1,4 +1,5 @@
 <div class="toolbar"><p class="muted" style="margin:0">Static pages such as About, Terms and Shipping. Shown in the footer.</p><div class="row-actions"><a class="btn ghost" href="<?= e(url('admin/builder/home')) ?>">Edit home page visually</a><a class="btn" href="<?= e(url('admin/pages/new')) ?>">+ New page</a></div></div>
-<section class="apanel flush"><div class="tbl-wrap"><table class="tbl"><thead><tr><th>Title</th><th>URL</th><th>Status</th></tr></thead><tbody>
+<div class="quick" style="margin-bottom:12px"><input type="search" data-tablefilter="#pages-table" placeholder="Filter pages…" aria-label="Filter pages"></div>
+<section class="apanel flush"><div class="tbl-wrap"><table class="tbl" id="pages-table"><thead><tr><th>Title</th><th>URL</th><th>Status</th></tr></thead><tbody>
 <?php foreach ($rows as $r): ?><tr><td><a href="<?= e(url('admin/pages/' . $r['id'])) ?>"><b><?= e($r['title']) ?></b></a></td><td class="muted">/p/<?= e($r['slug']) ?><?= $r['use_builder'] ? ' <span class="badge">builder</span>' : '' ?></td><td><span class="badge s-<?= $r['status'] === 'published' ? 'completed' : 'pending' ?>"><?= e($r['status']) ?></span></td></tr><?php endforeach; ?>
 </tbody></table></div></section>

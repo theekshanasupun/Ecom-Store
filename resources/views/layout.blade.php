@@ -29,6 +29,8 @@ $pagesFooter = \App\Models\Page::where('status', 'published')->where('in_footer'
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Mono:wght@400;700&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="<?= e(asset_v('css/store.css')) ?>">
+<link rel="stylesheet" href="<?= e(asset_v('css/store26.css')) ?>">
+<link rel="stylesheet" href="<?= e(asset_v('css/commerce26.css')) ?>">
 <style>:root{--accent:<?= e($accent) ?>;--accent-ink:<?= e(\App\Support\Art::ink($accent)) ?>}</style>
 </head>
 <body class="<?= $step ? 'is-checkout' : '' ?>">
@@ -107,12 +109,19 @@ if ($annOk):
 <main id="main"><?= $content ?></main>
 
 <footer class="ftr">
+  <?php if (setting('newsletter_footer_on', '1') === '1' && !$step): ?>
+  <section class="ftr-news" aria-label="Newsletter">
+    <div><h3><?= e(setting('newsletter_title', 'Join the list')) ?></h3><p><?= e(setting('newsletter_text', 'New drops and member-only deals, straight to your inbox. No spam, unsubscribe any time.')) ?></p></div>
+    <form class="news-form" data-news novalidate><?= \App\Http\Controllers\NewsletterController::fields() ?><label class="sr-only" for="ftr-news-email">Email address</label><input id="ftr-news-email" type="email" name="email" placeholder="you@example.com" required autocomplete="email"><button class="btn" type="submit">Subscribe</button><small class="sub-msg" role="status" hidden></small></form>
+  </section>
+  <?php endif; ?>
   <div class="ftr-ghost" aria-hidden="true"><?= e(strtoupper($name)) ?></div>
   <div class="ftr-row">
     <nav class="ftr-nav">
       <?php foreach ($cats as $c): ?><a href="<?= e(url('shop/' . $c['slug'])) ?>"><?= e($c['name']) ?></a><?php endforeach; ?>
       <a href="<?= e(url('cart')) ?>">Cart</a>
       <a href="<?= e(url('track')) ?>">Track order</a>
+      <?php if (\App\Services\GiftCards::enabled()): ?><a href="<?= e(url('gift-cards')) ?>">Gift cards</a><?php endif; ?>
       <?php foreach ($pagesFooter as $pg): ?><a href="<?= e(url('p/' . $pg['slug'])) ?>"><?= e($pg['title']) ?></a><?php endforeach; ?>
     </nav>
     <p class="ftr-copy">© <?= date('Y') ?> <?= e($name) ?>. <?= e(setting('footer_text')) ?></p>
@@ -126,18 +135,20 @@ if ($annOk):
   <div class="drawer-body" id="drawer-body"><?= partial('partials/cart_drawer', ['sum' => Cart::summary()]) ?></div>
 </aside>
 
-<!-- Search overlay -->
-<div class="search" id="search" hidden>
+<!-- Search overlay (typeahead: assets/js/store26.js) -->
+<div class="search" id="search" hidden role="dialog" aria-modal="true" aria-label="Search">
   <div class="search-box">
-    <form action="<?= e(url('search')) ?>" method="get" role="search"><input id="search-input" name="q" type="search" placeholder="Search everything…" autocomplete="off" aria-label="Search"></form>
-    <div class="search-results" id="search-results"></div>
+    <form action="<?= e(url('search')) ?>" method="get" role="search" autocomplete="off"><input id="search-input" name="q" type="search" placeholder="Search everything…" autocomplete="off" aria-label="Search" role="combobox" aria-expanded="false" aria-controls="search-results" aria-autocomplete="list" enterkeyhint="search"></form>
+    <div class="search-results" id="search-results" role="listbox" aria-live="polite"></div>
     <button class="search-close" id="search-close" type="button">Esc</button>
   </div>
 </div>
 <div class="toasts" id="toasts" aria-live="polite"></div>
-<?= \App\Support\Popups::render(request()) ?>
+<?= empty($meta['builder_preview']) ? \App\Support\Popups::render(request()) : '' ?>
 
 <script>window.KIOSK={base:<?= json_encode('') ?>,csrf:<?= json_encode(csrf_token()) ?>};</script>
 <script src="<?= e(asset_v('js/store.js')) ?>" defer></script>
+<script src="<?= e(asset_v('js/store26.js')) ?>" defer></script>
+<script src="<?= e(asset_v('js/commerce26.js')) ?>" defer></script>
 </body>
 </html>

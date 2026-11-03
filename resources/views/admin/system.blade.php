@@ -12,7 +12,9 @@
     <p class="muted small">Tip: take a <b>database backup</b> first. Updates are applied instantly; the store shows a short “updating” notice while files are replaced.</p>
   </section>
 
-  <section class="apanel"><h2>Update history</h2>
+  <section class="apanel"><div class="ph"><h2>Update history</h2>
+    <form method="post" action="<?= e(url('admin/system/prune')) ?>"><?= csrf_field() ?><button class="btn sm ghost" title="Delete older update logs and pre-update backups">Clean up now</button></form></div>
+    <p class="muted small" style="margin-top:-6px">Only the last <?= (int) \App\Services\Updater::KEEP ?> updates are kept to save space (history, logs and pre-update backups).</p>
     <?php if (!$history): ?><p class="muted">No updates applied yet.</p><?php endif; ?>
     <ul class="timeline"><?php foreach ($history as $h): ?><li><span><b>v<?= e($h['version']) ?></b> <span class="muted">from v<?= e($h['from']) ?></span><?= $h['notes'] ? '<br>' . e($h['notes']) : '' ?></span><small><?= e(fmt_date($h['at'])) ?></small></li><?php endforeach; ?></ul>
   </section>

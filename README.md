@@ -31,6 +31,18 @@ Product types: **Physical**, **Key/code** and **Account** (delivered automatical
 ## Payments
 Admin → Settings → Payments: Stripe Checkout, PayPal, bank transfer, cash on delivery. Stripe webhook: `/pay/stripe/webhook` (event `checkout.session.completed`). Test with sandbox credentials first.
 
+## What's new in 2.6
+- **Email builder & custom automations** (Admin → Email automations): drag-and-drop email builder with a live desktop/mobile preview (palette → drop at an exact position, product cards, coupon box, merge tags, undo/redo, test send, starter templates). Create **your own automations from any action** — order placed / paid / shipped / completed / cancelled / refunded, customer registered, newsletter signup, gift card issued, store credit added — with conditions (order total, product, department, first order, payment method), multi-step sequences with delays, optional coupon or store-credit rewards, and per-automation stats. The built-in flows can be switched to a designed email too.
+- **Newsletters** (Admin → Newsletters): design with the same builder, pick a segment, send now or schedule; batched sending that works with or without cron. Footer signup form on the storefront.
+- **Page builder shows your current layout**: the home page opens as editable blocks (hero, departments, trending, mix-it-all-up) instead of an empty canvas; the preview is the real store (announcement bar, header, footer) and refreshes live without flicker. Drag blocks from the palette to an exact spot, save layout templates, reset to the original.
+- **Advanced product variants**: options as buttons, colour swatches or dropdowns; every combination can have its own price, compare-at price, stock, SKU and image; sold-out combinations are dimmed on the product page and prices update live.
+- **Discounts** (Admin → Promotions → Discounts): automatic sitewide, department, product and quantity-tier price rules with schedules, audience targeting (members/guests) and badges. **Upsell, cross-sell & bundles**: recommendations on product pages, in the cart and as checkout order-bumps; bundles discount automatically when every item is in the cart.
+- **Store credit** (wallet with ledger, refund-to-credit, spend at checkout) and **Gift cards** (sell on /gift-cards with live card preview, scheduled email delivery, designs, balance checker, issue/bulk-generate/adjust/void, activity log, CSV export). Both can pay (part of) an order; amounts are restored automatically if an order is cancelled.
+- **Next-gen checkout**: 3-step flow (contact → delivery → payment) with inline validation, saved last address, delivery methods (Settings → Shipping & tax), live coupon / gift card / store-credit application, "you're saving" summary, order bumps, passwordless account creation. Clearer, compact price display on product, cart and checkout pages.
+- **Admin experience**: auto-collapsing sidebar groups (folds to an icon rail when idle), slide-over drawers instead of forms at the bottom of the page (coupons, discounts, offers, gift cards, customers, team…), live previews, global search (Ctrl+K), **create orders from the backend** (customer + products + variants + discount + payment status), **quick order updates** (status, mark paid, shipping/tracking details, bulk actions, packing slip, refund to store credit).
+- **Search suggestions** while typing (products, departments, recent & popular searches, "did you mean"). **Sign in with a password or a one-time email code**; register either way.
+- **Update history keeps only the last 3 updates** (log + automatic backups pruned too).
+
 ## What's new in 2.5
 - **Quick edit & bulk actions** (Admin → Products): edit price, compare-at price, stock, status, name and SKU inline; tick rows (shift-click ranges) to publish/draft, feature, move department, change prices by %, run a % sale (and end it), set/add stock or delete. Bulk actions also on Customers, Coupons and Subscribers.
 - **Add customers from the backend** (Admin → Customers → Add customer) — optional emailed login details, auto-generated password, mailing-list opt-in.
@@ -47,7 +59,7 @@ Admin → Settings → Payments: Stripe Checkout, PayPal, bank transfer, cash on
 ## System updates
 Admin → **System & updates** → upload `update.zip`. The package is applied, `php artisan migrate` runs, replaced files are backed up to `storage/app/backups`, and the zip is deleted automatically.
 
-Package layout (`tools/release.sh update` zips `tools/update/`):
+Package layout (`tools/make-update.sh <base-ref> <min_version> "notes"` builds it from the git diff; an optional `tools/post_update.php` is shipped too):
 ```
 update.json                {"version":"2.1.0","min_version":"2.0.0","notes":"...","delete":["old/file.php"]}
 app/… resources/… routes/… public/… config/kiosk.php (bump version) database/migrations/…  (mirror the site root)

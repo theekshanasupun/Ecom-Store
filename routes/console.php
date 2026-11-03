@@ -9,7 +9,8 @@ Artisan::command('inspire', function () {
 
 Artisan::command('kiosk:automations', function () {
     $n = \App\Support\Marketing::runDue(100);
-    $this->info("Automations run — $n email(s) sent.");
+    $g = \App\Services\GiftCards::sendDue(50);
+    $this->info("Automations run — $n email(s) sent, $g scheduled gift card(s) delivered.");
 })->purpose('Send due abandoned-cart / lifecycle emails');
 
 \Illuminate\Support\Facades\Schedule::command('kiosk:automations')->everyFiveMinutes()->withoutOverlapping();

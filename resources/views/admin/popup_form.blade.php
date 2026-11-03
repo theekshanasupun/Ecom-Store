@@ -34,7 +34,7 @@
     <div class="g3"><label class="fld"><span>Button text colour</span><input type="color" name="btn_fg" value="<?= e($v('btn_fg')) ?>"></label><?= field_text('width', 'Width (px)', $v('width'), ['type' => 'number', 'min' => '280', 'max' => '900']) ?><?= field_text('radius', 'Corner radius', $v('radius'), ['type' => 'number', 'min' => '0', 'max' => '40']) ?></div>
     <?= field_text('overlay', 'Overlay darkness (0–90)', $v('overlay'), ['type' => 'number', 'min' => '0', 'max' => '90']) ?>
   </section>
-  <div class="actions"><button class="btn">Save popup</button><a class="btn ghost" href="<?= e(url('admin/popups')) ?>">Back</a></div>
+  <div class="stickybar"><span class="grow muted small">Preview updates live on the right.</span><a class="btn ghost" href="<?= e(url('admin/popups')) ?>">Back</a><button class="btn">Save popup</button></div>
 </div>
 <aside class="sticky-r"><section class="apanel"><h2>Live preview</h2><iframe id="popup-preview" class="pv" title="Popup preview"></iframe><p class="muted small" style="margin-top:8px">Preview updates as you type. Triggers and frequency apply on the live site only.</p></section></aside>
 </div></form>

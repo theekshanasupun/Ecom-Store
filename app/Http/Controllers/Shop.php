@@ -15,10 +15,6 @@ class Shop extends Controller
 {
     public function home()
     {
-        $cats = Catalog::categories();
-        $trending = Catalog::query()->orderByDesc('featured')->orderByDesc('sales')->orderByDesc('products.id')->limit(8)->get()->all();
-        $panels = $cats->map(fn ($c) => ['cat' => $c, 'product' => Catalog::query()->where('category_id', $c->id)->orderByDesc('featured')->orderByDesc('sales')->first()])->all();
-        $mix = collect($panels)->pluck('product')->filter()->take(3)->values()->all();
         title(setting('store_name').' — '.setting('store_tagline'));
         meta_desc((string) setting('meta_description'));
         Meta::$data['home'] = true;
@@ -26,7 +22,7 @@ class Shop extends Controller
             return page('builder_page', ['html' => Blocks::renderAll($blocks)]);
         }
 
-        return page('home', compact('cats', 'trending', 'panels', 'mix'));
+        return page('home');
     }
 
     public function category(Request $r, string $slug)
@@ -70,24 +66,23 @@ class Shop extends Controller
     public function search(Request $r)
     {
         $q = trim((string) $r->query('q'));
-        $results = mb_strlen($q) >= 2 ? Catalog::search($q, 60)->all() : [];
+        $results = mb_strlen($q) >= 2 ? Catalog::searchRanked($q, 60)->all() : [];
+        $dym = ($q !== '' && ! $results) ? Catalog::didYouMean($q) : null;
+        $popular = $results ? [] : Catalog::popular();
         title($q !== '' ? 'Search: '.$q : 'Search');
         Meta::$data['noindex'] = true;
 
-        return page('search', compact('q', 'results'));
+        return page('search', compact('q', 'results', 'dym', 'popular'));
     }
 
     public function searchJson(Request $r)
     {
-        $q = trim((string) $r->query('q'));
-        $out = [];
-        if (mb_strlen($q) >= 2) {
-            foreach (Catalog::search($q, 6) as $p) {
-                $out[] = ['name' => $p->name, 'url' => url('product/'.$p->slug), 'price' => money($p->price, true), 'cat' => $p->cat?->name, 'color' => $p->color, 'media' => Catalog::media($p, false)];
-            }
-        }
+        $s = Catalog::suggest(trim((string) $r->query('q')));
+        // backward compatible `results` key (older cached store.js)
+        $s['ok'] = true;
+        $s['results'] = array_map(fn ($p) => $p, $s['products']);
 
-        return response()->json(['ok' => true, 'results' => $out]);
+        return response()->json($s);
     }
 
     public function page(string $slug)

@@ -16,9 +16,10 @@ class Coupons extends Controller
         $edit = $r->query('edit') ? Coupon::find((int) $r->query('edit')) : null;
         $cats = Category::orderBy('sort_order')->get(['id', 'name'])->all();
         $products = Product::orderBy('name')->limit(500)->get(['id', 'name', 'sku'])->all();
+        $stats = ['total' => count($rows), 'active' => count(array_filter($rows, fn ($c) => $c['status'] === 'active')), 'uses' => (int) array_sum(array_column($rows, 'used')), 'auto' => count(array_filter($rows, fn ($c) => $c['auto_apply']))];
         title('Coupons');
 
-        return admin_page('coupons', compact('rows', 'edit', 'cats', 'products'));
+        return admin_page('coupons', compact('rows', 'edit', 'cats', 'products', 'stats'));
     }
 
     public function save(Request $r)
@@ -26,12 +27,14 @@ class Coupons extends Controller
         $id = (int) $r->input('id');
         $code = strtoupper(preg_replace('/[^A-Za-z0-9_-]/', '', (string) $r->input('code')));
         $type = $r->input('type') === 'fixed' ? 'fixed' : 'percent';
-        $freeShip = $r->boolean('free_shipping');
-        $value = $type === 'fixed' ? to_cents($r->input('value', 0)) : max(0, min(100, (int) $r->input('value')));
-        $scope = in_array($r->input('scope'), ['cart', 'products', 'categories'], true) ? $r->input('scope') : 'cart';
+        $shippingOnly = $r->input('kind') === 'shipping';
+        $freeShip = $shippingOnly || $r->boolean('free_shipping');
+        $value = $shippingOnly ? 0 : ($type === 'fixed' ? to_cents($r->input('value', 0)) : max(0, min(100, (int) $r->input('value'))));
+        $scope = in_array($r->input('scope'), ['cart', 'products', 'categories'], true) && ! $shippingOnly ? $r->input('scope') : 'cart';
         $pids = $scope === 'products' ? array_values(array_filter(array_map('intval', (array) $r->input('product_ids')))) : [];
         $cids = $scope === 'categories' ? array_values(array_filter(array_map('intval', (array) $r->input('category_ids')))) : [];
-        $back = $id ? "/admin/coupons?edit=$id" : '/admin/coupons';
+        $back = $id ? "/admin/coupons?edit=$id" : '/admin/coupons?new=1';
+        keep_old($r->except(['product_ids', 'category_ids']));
         if ($code === '' || ($value <= 0 && ! $freeShip)) {
             flash('error', 'A code and either a positive value or "free shipping" are required.');
 
@@ -55,6 +58,7 @@ class Coupons extends Controller
             'status' => $r->input('status') === 'disabled' ? 'disabled' : 'active',
         ];
         $id ? Coupon::whereKey($id)->update($data) : Coupon::create($data);
+        session()->forget('_old_input');
         flash('success', 'Coupon saved.');
 
         return redirect('/admin/coupons');
@@ -78,5 +82,31 @@ class Coupons extends Controller
         flash('success', 'Coupon deleted.');
 
         return redirect('/admin/coupons');
+    }
+
+    /** AJAX on/off switch from the table. */
+    public function toggle(Request $r, int $id)
+    {
+        $c = Coupon::findOrFail($id);
+        $c->update(['status' => $r->input('value') === '1' ? 'active' : 'disabled']);
+
+        return response()->json(['ok' => true, 'message' => $c->code.($c->status === 'active' ? ' enabled' : ' disabled')]);
+    }
+
+    public function duplicate(int $id)
+    {
+        $c = Coupon::findOrFail($id);
+        $n = $c->replicate();
+        $base = preg_replace('/-COPY\d*$/', '', $c->code);
+        $code = $base.'-COPY';
+        $i = 1;
+        while (Coupon::where('code', $code)->exists()) $code = $base.'-COPY'.(++$i);
+        $n->code = $code;
+        $n->used = 0;
+        $n->status = 'disabled';
+        $n->save();
+        flash('success', "Duplicated as $code (disabled — review and enable it).");
+
+        return redirect('/admin/coupons?edit='.$n->id);
     }
 }

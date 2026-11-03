@@ -50,7 +50,7 @@ final class Coupons
         $pids = $c->productIds();
         $cids = $c->categoryIds();
         foreach ($lines as $l) {
-            if (($l['qty'] ?? 0) <= 0) continue;
+            if (($l['qty'] ?? 0) <= 0 || ! empty($l['gc'])) continue;
             $p = $l['p'];
             if ($c->exclude_sale && $p->compare_price > $p->price) continue;
             if ($c->scope === 'products' && ! in_array((int) $p->id, $pids, true)) continue;
