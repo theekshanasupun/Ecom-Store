@@ -249,6 +249,7 @@ class OrdersController extends Controller
         }
         \App\Services\StoreCredit::add($u, $cents, 'Refund of order '.$o->number, $o->id, $this->actor());
         Orders::event($o, 'Refunded '.money($cents).' to store credit', $this->actor());
+        if (! $r->boolean('mark_refunded')) \App\Services\Loyalty::onOrderRefund($o, $cents, $this->actor());
         if ($r->boolean('mark_refunded')) {
             $o->update(['payment_status' => 'refunded']);
             $this->applyStatus($o, 'refunded');

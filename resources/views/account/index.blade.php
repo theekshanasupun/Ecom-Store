@@ -9,6 +9,7 @@ $credit = (int) ($u->credit ?? 0);
   <div class="acct-stats">
     <div class="card"><b><?= (int) $stats['orders'] ?></b><small>Orders</small></div>
     <div class="card"><b><?= money($stats['spent'], true) ?></b><small>Total spent</small></div>
+    <?php if (\App\Services\Loyalty::on() && !$u->isStaff()): $lt = \App\Services\LoyaltyTiers::of($u); ?><a class="card" href="<?= e(url('account/loyalty')) ?>" style="text-decoration:none"><b>★ <?= number_format((int) $u->points) ?></b><small><?= e(\App\Services\Loyalty::name()) ?> points<?= $lt ? ' · ' . e($lt->name) : '' ?> →</small></a><?php endif; ?>
     <?php if ($credit > 0 || \App\Services\StoreCredit::enabled()): ?><div class="card"><b><?= money($credit) ?></b><small>Store credit</small></div><?php endif; ?>
     <?php if (\App\Services\GiftCards::enabled()): ?><div class="card"><b>🎁</b><small><a href="<?= e(url('gift-cards')) ?>">Buy a gift card</a> · <a href="<?= e(url('gift-cards/balance')) ?>">Check a balance</a></small></div><?php endif; ?>
   </div>

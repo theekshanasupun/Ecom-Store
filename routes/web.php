@@ -61,7 +61,17 @@ Route::post('/logout', [Account::class, 'logout']);
 Route::middleware('auth')->group(function () {
     Route::get('/account', [Account::class, 'index']);
     Route::post('/account/profile', [Account::class, 'profile']);
+    Route::get('/account/loyalty', [\App\Http\Controllers\LoyaltyController::class, 'index']);
+    Route::post('/account/loyalty/checkin', [\App\Http\Controllers\LoyaltyController::class, 'checkin'])->middleware('throttle:20,1');
+    Route::post('/account/loyalty/redeem', [\App\Http\Controllers\LoyaltyController::class, 'redeem'])->middleware('throttle:20,1');
+    Route::post('/account/loyalty/redemption/{id}/cancel', [\App\Http\Controllers\LoyaltyController::class, 'cancelRedemption'])->whereNumber('id');
+    Route::post('/account/loyalty/play', [\App\Http\Controllers\LoyaltyController::class, 'play'])->middleware('throttle:20,1');
+    Route::post('/account/loyalty/prefs', [\App\Http\Controllers\LoyaltyController::class, 'prefs']);
+    Route::post('/account/loyalty/read', [\App\Http\Controllers\LoyaltyController::class, 'read']);
+    Route::post('/account/loyalty/assist', [\App\Http\Controllers\LoyaltyController::class, 'assist'])->middleware('throttle:5,1');
 });
+
+Route::get('/api/loyalty/member', [\App\Http\Controllers\LoyaltyController::class, 'api'])->middleware('throttle:60,1');
 
 // >>> v26 storefront routes (search, auth/OTP, newsletter, gift cards, offers, checkout) — each workstream adds below its own marker
 // >>> v26:front-core
@@ -224,6 +234,37 @@ Route::prefix('admin')->group(function () {
         Route::post('builder/template', [A\Builder::class, 'template']);
         Route::post('builder/template/delete', [A\Builder::class, 'templateDelete']);
 
+        // >>> v27:loyalty
+        Route::prefix('loyalty')->group(function () {
+            $L = \App\Http\Controllers\Admin\LoyaltyAdmin::class;
+            Route::get('/', [$L, 'overview']);
+            Route::get('members', [$L, 'members']);
+            Route::get('members/{id}', [$L, 'member'])->whereNumber('id');
+            Route::post('members/{id}/{act}', [$L, 'memberAction'])->whereNumber('id')->where('act', 'adjust|credit|tier|status|reward|voucher|challenge|activity|profile');
+            Route::get('referrals', [$L, 'referrals']);
+            Route::post('referrals/{id}/{act}', [$L, 'referralAction'])->whereNumber('id')->where('act', 'approve|reject');
+            Route::get('redemptions', [$L, 'redemptions']);
+            Route::post('redemptions/{id}/{act}', [$L, 'redemptionAction'])->whereNumber('id')->where('act', 'approve|reject|cancel');
+            Route::get('segments', [$L, 'segments']);
+            Route::get('reports', [$L, 'reports']);
+            Route::get('security', [$L, 'security']);
+            Route::post('flags/{id}', [$L, 'flagAction'])->whereNumber('id');
+        });
+        Route::middleware('admin')->prefix('loyalty')->group(function () {
+            $L = \App\Http\Controllers\Admin\LoyaltyAdmin::class;
+            Route::get('settings', [$L, 'settings']);
+            Route::post('settings', [$L, 'settingsSave']);
+            Route::post('enrol', [$L, 'enrol']);
+            Route::post('run', [$L, 'runNow']);
+            Route::post('bulk', [$L, 'bulk']);
+            Route::post('segments/save', [$L, 'segmentSave']);
+            Route::post('segments/{id}/delete', [$L, 'segmentDelete'])->whereNumber('id');
+            $ent = 'tiers|rewards|rules|campaigns|challenges|badges|competitions|workflows';
+            Route::get('{e}', [$L, 'crud'])->where('e', $ent);
+            Route::post('{e}/save', [$L, 'crudSave'])->where('e', $ent);
+            Route::post('{e}/{id}/toggle', [$L, 'crudToggle'])->where('e', $ent)->whereNumber('id');
+            Route::post('{e}/{id}/delete', [$L, 'crudDelete'])->where('e', $ent)->whereNumber('id');
+        });
         Route::middleware('admin')->group(function () {
             Route::get('settings', [A\SettingsController::class, 'index']);
             Route::post('settings', [A\SettingsController::class, 'save']);

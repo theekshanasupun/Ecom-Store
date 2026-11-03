@@ -10,7 +10,7 @@ final class Settings
 
     public static function defaults(): array
     {
-        return [
+        return \App\Services\Loyalty::defaults() + [
             'store_name' => 'KIOSK', 'store_tagline' => 'One store. Every want.', 'store_email' => '', 'store_phone' => '', 'store_address' => '',
             'currency' => 'USD', 'currency_symbol' => '$',
             'hero_line1' => 'One store.', 'hero_line2' => 'Every want.',

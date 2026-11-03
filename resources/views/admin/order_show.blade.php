@@ -32,7 +32,10 @@ foreach ($items as $it) if (in_array($it['type'], ['key', 'account']) && count($
         <tr class="grand"><td colspan="4" class="r">Total</td><td class="r"><?= money($o['total']) ?></td></tr>
         <?php if ($o['giftcard_used']): ?><tr><td colspan="4" class="r muted">Paid with gift card <?= e($o['giftcard_code']) ?></td><td class="r">−<?= money($o['giftcard_used']) ?></td></tr><?php endif; ?>
         <?php if ($o['credit_used']): ?><tr><td colspan="4" class="r muted">Paid with store credit</td><td class="r">−<?= money($o['credit_used']) ?></td></tr><?php endif; ?>
-        <?php if ($o['giftcard_used'] || $o['credit_used']): ?><tr><td colspan="4" class="r muted">Due via <?= e($o['payment_method']) ?></td><td class="r"><b><?= money($o->due()) ?></b></td></tr><?php endif; ?>
+        <?php if ($o['points_used']): ?><tr><td colspan="4" class="r muted">Paid with <?= number_format($o['points_used']) ?> loyalty points</td><td class="r">−<?= money($o['points_value']) ?></td></tr><?php endif; ?>
+        <?php if ($o['cashback_used']): ?><tr><td colspan="4" class="r muted">Paid with cashback</td><td class="r">−<?= money($o['cashback_used']) ?></td></tr><?php endif; ?>
+        <?php if ($o['tier_discount']): ?><tr><td colspan="4" class="r muted">Member discount (included in total)</td><td class="r">−<?= money($o['tier_discount']) ?></td></tr><?php endif; ?>
+        <?php if ($o['giftcard_used'] || $o['credit_used'] || $o['points_used'] || $o['cashback_used']): ?><tr><td colspan="4" class="r muted">Due via <?= e($o['payment_method']) ?></td><td class="r"><b><?= money($o->due()) ?></b></td></tr><?php endif; ?>
         <?php if ($o['savings']): ?><tr><td colspan="4" class="r muted">Customer saved</td><td class="r" style="color:var(--accent)"><?= money($o['savings']) ?></td></tr><?php endif; ?>
       </tfoot></table></div></section>
 

@@ -25,6 +25,7 @@ final class Coupons
     public static function validate(Coupon $c, int $subtotal, array $lines = [], ?string $email = null, ?int $userId = null): array
     {
         if ($c->status !== 'active') return [null, 'That code is not valid.'];
+        if ($c->user_id && (int) $c->user_id !== (int) $userId) return [null, 'That code belongs to another account — sign in to use it.'];
         if ($c->starts_at && $c->starts_at->isFuture()) return [null, 'That code is not active yet.'];
         if ($c->ends_at && $c->ends_at->isPast()) return [null, 'That code has expired.'];
         if ($c->max_uses > 0 && $c->used >= $c->max_uses) return [null, 'That code has been fully used.'];

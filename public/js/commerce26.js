@@ -212,6 +212,11 @@
       apply(f.dataset.apply, { code: ($('input[name=code]', f).value || '').trim() });
     });
     sumBox.addEventListener('click', function (e) { var c = e.target.closest('[data-apply-clear]'); if (c) apply(c.dataset.applyClear, { code: '' }); });
+    sumBox.addEventListener('change', function (e) {
+      if (e.target.hasAttribute('data-apply-points')) apply('points', { points: parseInt(e.target.value, 10) || 0 });
+      if (e.target.hasAttribute('data-apply-cashback')) apply('cashback', { on: e.target.checked ? 1 : 0 });
+    });
+    sumBox.addEventListener('click', function (e) { var b = e.target.closest('[data-points-set]'); if (b) apply('points', { points: parseInt(b.dataset.pointsSet, 10) || 0 }); });
     sumBox.addEventListener('change', function (e) { if (e.target.hasAttribute('data-apply-credit')) apply('credit', { on: e.target.checked ? 1 : 0 }); });
     $$('input[name=ship]', form).forEach(function (r) { r.addEventListener('change', function () { apply('ship', { id: r.value }); }); });
     var tog = $('[data-sumtoggle]'); if (tog) tog.addEventListener('click', function () { var a = tog.closest('.co26-aside'); var o = a.classList.toggle('open'); tog.setAttribute('aria-expanded', o); });

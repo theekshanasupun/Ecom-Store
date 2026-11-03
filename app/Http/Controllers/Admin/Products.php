@@ -76,6 +76,8 @@ class Products extends Controller
             'stock' => max(0, (int) $r->input('stock')), 'unlimited' => $r->boolean('unlimited'), 'sku' => $s('sku', 80),
             'art' => $s('art', 20), 'art_color' => preg_match('/^#[0-9a-fA-F]{6}$/', (string) $r->input('art_color')) ? $r->input('art_color') : '',
             'badge' => $s('badge', 30), 'tags' => $s('tags'), 'options' => $opts ? json_encode($opts, JSON_UNESCAPED_UNICODE) : '', 'variants' => $variants ? json_encode($variants, JSON_UNESCAPED_UNICODE) : '',
+            'vip_tier_id' => ((int) $r->input('vip_tier_id')) ?: null, 'early_access_tier_id' => ((int) $r->input('early_access_tier_id')) ?: null,
+            'early_access_until' => $r->filled('early_access_until') ? \Carbon\Carbon::parse((string) $r->input('early_access_until')) : null,
             'details' => (string) $r->input('details'), 'delivery_note' => $s('delivery_note'),
             'seo_title' => mb_substr(trim((string) $r->input('seo_title')), 0, 190), 'seo_description' => mb_substr(trim((string) $r->input('seo_description')), 0, 320), 'seo_noindex' => $r->boolean('seo_noindex'),
             'featured' => $r->boolean('featured'), 'status' => $r->input('status') === 'draft' ? 'draft' : 'active',

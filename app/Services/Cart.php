@@ -27,6 +27,7 @@ final class Cart
     {
         $p = Catalog::byId($pid);
         if (! $p) return ['ok' => false, 'error' => 'That product is no longer available.'];
+        if ($why = LoyaltyTiers::gate($p, auth()->user())) return ['ok' => false, 'error' => $why];
 
         $clean = [];
         foreach ($p->options_list as $o) {
@@ -131,6 +132,20 @@ final class Cart
     {
         $c = self::data();
         $c['gift'] = $code ? GiftCards::normalise($code) : null;
+        self::save($c);
+    }
+
+    public static function setPoints(int $pts): void
+    {
+        $c = self::data();
+        $c['lpoints'] = max(0, $pts);
+        self::save($c);
+    }
+
+    public static function setCashback(bool $on): void
+    {
+        $c = self::data();
+        $c['lcash'] = $on;
         self::save($c);
     }
 
@@ -239,15 +254,16 @@ final class Cart
         $offers = Offers::cartDiscounts($live);
         $offerDiscount = max(0, min((int) $offers['total'], $subtotal - $giftLines - $discount));
 
+        $tierDisc = LoyaltyTiers::discount(auth()->user(), max(0, $subtotal - $giftLines - $discount - $offerDiscount));
         $freeMin = (int) setting('free_shipping_min', 0);
-        $freeShip = $coupon && $coupon->free_shipping;
+        $freeShip = ($coupon && $coupon->free_shipping) || LoyaltyTiers::freeDelivery(auth()->user());
         $shipOpts = $hasPhysical ? self::shippingOptions($physical, (bool) $freeShip) : [];
         $shipId = $shipOpts ? (isset($shipOpts[$c['ship'] ?? '']) ? $c['ship'] : array_key_first($shipOpts)) : null;
         $shipping = $shipId ? (int) $shipOpts[$shipId]['price'] : 0;
         $rate = (float) setting('tax_rate', 0);
-        $taxBase = max(0, $subtotal - $giftLines - $discount - $offerDiscount);
+        $taxBase = max(0, $subtotal - $giftLines - $discount - $offerDiscount - $tierDisc);
         $tax = $rate > 0 ? (int) round($taxBase * $rate / 100) : 0;
-        $total = max(0, $subtotal - $discount - $offerDiscount + $shipping + $tax);
+        $total = max(0, $subtotal - $discount - $offerDiscount - $tierDisc + $shipping + $tax);
 
         // ---- tenders: gift card + store credit (cannot pay for gift cards themselves) ----
         $tenderable = max(0, $total - $giftLines);
@@ -262,13 +278,15 @@ final class Cart
         $creditBal = (auth()->check() && StoreCredit::enabled()) ? StoreCredit::balance(auth()->user()) : 0;
         $useCredit = $creditBal > 0 && ! empty($c['credit']);
         $credit = $useCredit ? min($creditBal, $tenderable - $gift) : 0;
+        $loy = Loyalty::checkout(auth()->user(), max(0, $tenderable - $gift - $credit), (int) ($c['lpoints'] ?? 0), ! empty($c['lcash']), (bool) ($coupon && ! $auto));
         self::save($c);
 
         return [
+            'tier_discount' => $tierDisc, 'loyalty' => $loy, 'lpoints' => $loy['points'], 'lpoints_value' => $loy['points_value'], 'lcash' => $loy['cash'],
             'lines' => $lines, 'count' => array_sum(array_column($lines, 'qty')),
             'physical' => $physical, 'digital' => $digital, 'subtotal' => $subtotal, 'discount' => $discount, 'offer_discount' => $offerDiscount, 'offer_rows' => $offers['rows'], 'savings' => $savings,
             'shipping' => $shipping, 'tax' => $tax, 'total' => $total,
-            'gift' => $gift, 'gift_card' => $giftCard, 'gift_error' => $giftError, 'credit' => $credit, 'credit_balance' => $creditBal, 'use_credit' => $useCredit, 'due' => max(0, $total - $gift - $credit),
+            'gift' => $gift, 'gift_card' => $giftCard, 'gift_error' => $giftError, 'credit' => $credit, 'credit_balance' => $creditBal, 'use_credit' => $useCredit, 'due' => max(0, $total - $gift - $credit - $loy['points_value'] - $loy['cash']),
             'has_physical' => $hasPhysical, 'only_digital' => ! $hasPhysical && $lines !== [], 'has_gift' => $giftLines > 0, 'gift_lines_total' => $giftLines,
             'ship_options' => $shipOpts, 'ship_id' => $shipId, 'ship_label' => $shipId ? $shipOpts[$shipId]['label'] : '',
             'coupon' => $coupon, 'coupon_error' => $couponError, 'coupon_auto' => $auto, 'free_ship_coupon' => (bool) $freeShip,

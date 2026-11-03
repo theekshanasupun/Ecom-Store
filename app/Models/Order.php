@@ -36,7 +36,7 @@ class Order extends Model
     /** Amount still to be collected by the payment method (after gift card / store credit). */
     public function due(): int
     {
-        return max(0, (int) $this->total - (int) $this->credit_used - (int) $this->giftcard_used);
+        return max(0, (int) $this->total - (int) $this->credit_used - (int) $this->giftcard_used - (int) $this->points_value - (int) $this->cashback_used);
     }
 
     public function trackingLink(): string

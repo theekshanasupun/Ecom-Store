@@ -60,6 +60,12 @@ class Checkout extends Controller
             case 'credit':
                 Cart::setCredit(filter_var($r->input('on'), FILTER_VALIDATE_BOOLEAN));
                 break;
+            case 'points':
+                Cart::setPoints((int) $r->input('points'));
+                break;
+            case 'cashback':
+                Cart::setCashback(filter_var($r->input('on'), FILTER_VALIDATE_BOOLEAN));
+                break;
             case 'ship':
                 Cart::setShip((string) $r->input('id'));
                 break;

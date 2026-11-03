@@ -30,6 +30,12 @@ $isPool = $p && in_array($p['type'], ['key', 'account'], true);
           <?= field_text('compare_price', 'Compare-at price', $p && $p['compare_price'] ? from_cents((int) $p['compare_price']) : '', ['type' => 'number', 'step' => '0.01', 'min' => '0', 'hint' => 'Shows a strike-through']) ?>
           <?= field_text('sku', 'SKU', $v('sku')) ?>
         </div>
+        <?php $tiersOpt = ['' => 'Everyone'] + array_column(array_map(fn ($t) => (array) $t, \App\Services\LoyaltyTiers::all()), 'name', 'id'); ?>
+        <div class="g3">
+          <?= field_select('vip_tier_id', 'VIP-only (loyalty tier)', $tiersOpt, $p['vip_tier_id'] ?? '', ['hint' => 'Only this tier and above can buy']) ?>
+          <?= field_select('early_access_tier_id', 'Early access tier', $tiersOpt, $p['early_access_tier_id'] ?? '', ['hint' => 'Empty = any member with the early-access benefit']) ?>
+          <?= field_text('early_access_until', 'Early access until', !empty($p['early_access_until']) ? date('Y-m-d\TH:i', strtotime((string) $p['early_access_until'])) : '', ['type' => 'datetime-local', 'hint' => 'Others can buy after this time']) ?>
+        </div>
         <div class="g3" data-show-for="physical">
           <?= field_text('stock', 'Stock quantity', $v('stock', 0), ['type' => 'number', 'min' => '0']) ?>
           <div class="fld"><span>&nbsp;</span><?= field_check('unlimited', 'Unlimited stock', (bool) $v('unlimited', 0)) ?></div>

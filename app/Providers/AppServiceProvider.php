@@ -13,6 +13,7 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        \App\Models\User::created(fn ($u) => \App\Services\Loyalty::onUserCreated($u));
         if (installed()) {
             try {
                 $tz = (string) setting('timezone', config('app.timezone'));

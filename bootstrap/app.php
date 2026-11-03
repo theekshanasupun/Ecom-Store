@@ -3,6 +3,7 @@
 use App\Http\Middleware\Admin;
 use App\Http\Middleware\AutomationTick;
 use App\Http\Middleware\EnsureInstalled;
+use App\Http\Middleware\LoyaltyRef;
 use App\Http\Middleware\Maintenance;
 use App\Http\Middleware\Staff;
 use Illuminate\Foundation\Application;
@@ -19,7 +20,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->trustProxies(at: '*');
         $middleware->validateCsrfTokens(except: ['pay/stripe/webhook']);
-        $middleware->web(prepend: [EnsureInstalled::class], append: [Maintenance::class, AutomationTick::class]);
+        $middleware->web(prepend: [EnsureInstalled::class], append: [Maintenance::class, LoyaltyRef::class, AutomationTick::class]);
         $middleware->alias(['staff' => Staff::class, 'admin' => Admin::class]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

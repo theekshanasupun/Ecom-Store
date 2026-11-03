@@ -25,6 +25,7 @@ class AutomationTick
             if (! Cache::add('kiosk.automation.tick', 1, 300)) return;
             \App\Support\Marketing::runDue(8);
             \App\Services\GiftCards::sendDue(10);
+            if (\App\Services\Loyalty::on()) \App\Services\LoyaltyEngagement::tick();
         } catch (\Throwable $e) {
             \Log::debug('automation tick: '.$e->getMessage());
         }

@@ -58,6 +58,9 @@ $headline = $paid ? 'Thank you.' : ($o['status'] === 'cancelled' ? 'Cancelled.' 
         <?php if ($o['discount'] > 0): ?><div class="disc"><dt>Discount <?= e($o['coupon_code']) ?></dt><dd>−<?= money($o['discount']) ?></dd></div><?php endif; ?>
         <?php if ($o['has_physical']): ?><div><dt>Shipping</dt><dd><?= $o['shipping'] > 0 ? money($o['shipping']) : 'Free' ?></dd></div><?php endif; ?>
         <?php if ($o['tax'] > 0): ?><div><dt>Tax</dt><dd><?= money($o['tax']) ?></dd></div><?php endif; ?>
+        <?php if ($o['tier_discount'] > 0): ?><div class="disc"><dt>Member discount</dt><dd>−<?= money($o['tier_discount']) ?></dd></div><?php endif; ?>
+        <?php if ($o['points_used'] > 0): ?><div class="disc"><dt>Points (<?= number_format($o['points_used']) ?>)</dt><dd>−<?= money($o['points_value']) ?></dd></div><?php endif; ?>
+        <?php if ($o['cashback_used'] > 0): ?><div class="disc"><dt>Cashback</dt><dd>−<?= money($o['cashback_used']) ?></dd></div><?php endif; ?>
       </dl>
       <div class="total"><span>Total</span><b><?= money($o['total']) ?></b></div>
       <?php if ($o['has_physical']): ?>

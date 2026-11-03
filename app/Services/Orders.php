@@ -45,7 +45,7 @@ final class Orders
                 'email' => mb_strtolower($cust['email']), 'name' => $cust['name'], 'phone' => $cust['phone'] ?? '',
                 'status' => 'pending', 'payment_status' => 'unpaid', 'payment_method' => $method,
                 'subtotal' => $sum['subtotal'], 'shipping' => $sum['shipping'], 'tax' => $sum['tax'], 'discount' => $sum['discount'] + ($sum['offer_discount'] ?? 0), 'total' => $sum['total'],
-                'savings' => $sum['savings'] ?? 0, 'ship_method' => $sum['ship_label'] ?? null,
+                'savings' => $sum['savings'] ?? 0, 'tier_discount' => $sum['tier_discount'] ?? 0, 'ship_method' => $sum['ship_label'] ?? null,
                 'currency' => currency_code(), 'coupon_code' => $sum['coupon']->code ?? null, 'has_physical' => $sum['has_physical'],
                 'ship_name' => $cust['ship_name'] ?? '', 'ship_address' => $cust['ship_address'] ?? '', 'ship_address2' => $cust['ship_address2'] ?? '',
                 'ship_city' => $cust['ship_city'] ?? '', 'ship_state' => $cust['ship_state'] ?? '', 'ship_zip' => $cust['ship_zip'] ?? '', 'ship_country' => $cust['ship_country'] ?? '',
@@ -74,6 +74,7 @@ final class Orders
             }
             if (! empty($sum['coupon'])) {
                 Coupon::where('id', $sum['coupon']->id)->increment('used');
+                LoyaltyRewards::couponUsed($sum['coupon']->code);
             }
             self::event($o, 'Order placed ('.$method.')', 'customer');
             foreach ($sum['offer_rows'] ?? [] as $r) self::event($o, 'Offer applied: '.$r['label'].' (−'.money($r['amount']).')');
@@ -91,6 +92,16 @@ final class Orders
                     if ($creditUsed > 0) self::event($o, 'Paid '.money($creditUsed).' with store credit');
                 }
             }
+            // loyalty tenders: points + cashback (separate wallets from store credit)
+            if (($sum['lpoints'] ?? 0) > 0 || ($sum['lcash'] ?? 0) > 0) {
+                $lu = ! empty($cust['user_id']) ? \App\Models\User::find($cust['user_id']) : null;
+                if ($lu) {
+                    [$pu, $pv, $cu2] = Loyalty::spend($lu, $o, (int) ($sum['lpoints'] ?? 0), (int) ($sum['lpoints_value'] ?? 0), (int) ($sum['lcash'] ?? 0));
+                    if ($pu) self::event($o, 'Paid '.money($pv).' with '.number_format($pu).' loyalty points');
+                    if ($cu2) self::event($o, 'Paid '.money($cu2).' with cashback');
+                    $o->points_used = $pu; $o->points_value = $pv; $o->cashback_used = $cu2;
+                }
+            }
             if ($giftUsed || $creditUsed) {
                 $o->update(['giftcard_used' => $giftUsed, 'credit_used' => $creditUsed, 'giftcard_code' => $giftUsed ? $sum['gift_card']->code : null]);
             }
@@ -105,6 +116,7 @@ final class Orders
     /** Return gift card balance / store credit that was spent on an order that is cancelled or refunded. */
     public static function restoreTenders(Order $o, string $why = 'Order cancelled'): void
     {
+        Loyalty::restoreTenders($o, $why);
         $claimed = Order::whereKey($o->id)->where(fn ($q) => $q->where('giftcard_used', '>', 0)->orWhere('credit_used', '>', 0))->first();
         if (! $claimed) return;
         $gu = (int) $claimed->giftcard_used;
@@ -146,6 +158,7 @@ final class Orders
         self::refreshStatus($o);
         $o->refresh();
         self::sendReceipt($o, true);
+        Loyalty::onOrderPaid($o);
         Triggers::fire('order.paid', ['email' => $o->email, 'name' => $o->name, 'order' => $o, 'user' => $o->user, 'total' => $o->total, 'ref' => 'o'.$o->id]);
         if (setting('notify_admin') === '1' && setting('store_email')) {
             Mailer::send((string) setting('store_email'), 'New paid order '.$o->number.' · '.money($o->total),
@@ -210,6 +223,8 @@ final class Orders
             }
             self::restoreTenders($o, $status === 'refunded' ? 'Order refunded' : 'Order cancelled');
         }
+        if (in_array($status, ['cancelled', 'refunded'], true)) Loyalty::onOrderRefund($o, max(0, (int) $o->total - (int) $o->loyalty_refunded), 'admin');
+        else Loyalty::onOrderStatus($o);
         if (in_array($status, ['shipped', 'completed'], true)) {
             $msg = $status === 'shipped' ? 'Your order is on its way' : 'Your order is complete';
             $inner = '<p style="color:#cfcfd6;line-height:1.6">Order <b>'.e($o->number).'</b> is now <b>'.e(self::STATUSES[$status]).'</b>.'
