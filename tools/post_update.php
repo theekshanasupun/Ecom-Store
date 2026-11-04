@@ -1,7 +1,7 @@
 <?php
 
 /**
- * v2.7.0 post-update hook (executed once by the updater, then deleted).
+ * v2.7.1 post-update hook (executed once by the updater, then deleted).
  * The 2.5 updater writes its own history entry AFTER this file runs, so pruning is deferred to shutdown:
  * keep only the 3 most recent updates in the history + update log + automatic pre-update backups.
  */

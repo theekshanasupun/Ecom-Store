@@ -22,7 +22,7 @@ class LoyaltyTest extends TestCase
         LoyaltyReports::seedDefaults();
         DB::table('loyalty_badges')->delete();      // isolate: badge/challenge bonuses are tested on their own
         DB::table('loyalty_challenges')->delete();
-        Settings::setMany(['loyalty_earn_status' => 'completed', 'loyalty_redeem_rate' => '100', 'loyalty_min_redeem' => '0', 'loyalty_expiry_months' => '12', 'pts_welcome' => '0', 'pts_first_purchase' => '0']);
+        Settings::setMany(['loyalty_earn_spend' => '1', 'loyalty_earn_points' => '1', 'loyalty_earn_status' => 'completed', 'loyalty_redeem_rate' => '100', 'loyalty_min_redeem' => '0', 'loyalty_expiry_months' => '12', 'pts_welcome' => '0', 'pts_first_purchase' => '0']);
     }
 
     private function user(string $email = null): User
@@ -273,5 +273,19 @@ class LoyaltyTest extends TestCase
         Loyalty::onOrderPaid($this->order($u, 10000, 'completed'));
         $this->assertSame(0, Loyalty::balance($u) + Loyalty::pending($u));
         $this->assertFalse(Loyalty::checkout($u, 10000, 100, false, false)['on']);
+    }
+
+    public function test_spend_100_earn_1_point_and_product_estimate_uses_discounted_price(): void
+    {
+        Settings::setMany(['loyalty_earn_spend' => '100', 'loyalty_earn_points' => '1']);
+        $u = $this->user();
+        $this->assertSame(2, Loyalty::computeEarn($this->order($u, 25000, 'completed'), $u)['points']);   // 250.00 → 2 points (rounded down)
+        $this->assertSame(9, Loyalty::computeEarn($this->order($u, 99900, 'completed'), $u)['points']);
+        $p = (object) ['id' => 1, 'category_id' => 1, 'type' => 'physical'];
+        $rate = Loyalty::productRate($p, $u);
+        $this->assertSame(4, Loyalty::estimate(45000, $rate));      // discounted price 450.00 → 4 (not the MRP)
+        $this->assertSame(0, Loyalty::estimate(9900, $rate));
+        $sum = ['subtotal' => 100000, 'discount' => 50000, 'offer_discount' => 0, 'tier_discount' => 0, 'lpoints_value' => 0, 'lcash' => 0, 'lines' => [['p' => $p, 'total' => 100000, 'qty' => 1]]];
+        $this->assertSame(5, Loyalty::estimateCart($sum, $u));      // 1000 − 500 discount = 500 → 5 points
     }
 }

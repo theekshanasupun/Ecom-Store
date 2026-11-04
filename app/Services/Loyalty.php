@@ -33,7 +33,7 @@ final class Loyalty
     {
         return [
             'loyalty_on' => '1', 'loyalty_name' => 'Rewards', 'loyalty_desc' => 'Earn points on every order, unlock tiers and spend them on rewards.', 'loyalty_color' => '#c6ff3d', 'loyalty_logo' => '',
-            'loyalty_earn_rate' => '1', 'loyalty_round' => 'floor', 'loyalty_redeem_rate' => '100', 'loyalty_min_redeem' => '100', 'loyalty_max_redeem' => '0', 'loyalty_max_redeem_pct' => '100',
+            'loyalty_earn_spend' => '100', 'loyalty_earn_points' => '1', 'loyalty_round' => 'floor', 'loyalty_redeem_rate' => '100', 'loyalty_min_redeem' => '100', 'loyalty_max_redeem' => '0', 'loyalty_max_redeem_pct' => '100',
             'loyalty_expiry_months' => '12', 'loyalty_expiry_remind_days' => '30', 'loyalty_earn_status' => 'completed', 'loyalty_hold_days' => '0',
             'loyalty_guest_earn' => '0', 'loyalty_exclude_staff' => '1', 'loyalty_stack_coupons' => '1', 'loyalty_excl_products' => '', 'loyalty_excl_categories' => '',
             'loyalty_max_points_day' => '5000', 'loyalty_redeem_approval' => '0', 'loyalty_staff_adjust_limit' => '1000',
@@ -85,6 +85,50 @@ final class Loyalty
         return match (setting('loyalty_round', 'floor')) {
             'ceil' => (int) ceil($v - 1e-9), 'round' => (int) round($v), default => (int) floor($v + 1e-9),
         };
+    }
+
+    /** Base earning: points per 1.00 of currency (default: spend 100 → 1 point = 0.01). */
+    public static function earnRate(): float
+    {
+        return max(0.0, (float) setting('loyalty_earn_points', 1)) / max(0.0001, (float) setting('loyalty_earn_spend', 100));
+    }
+
+    /** Points per 1.00 for a product (rule override × tier multiplier); null when the product cannot earn. */
+    public static function productRate(?object $p, ?User $u = null): ?float
+    {
+        if (! self::on() || ! $p || ($p->type ?? '') === 'giftcard') return null;
+        if (in_array((int) $p->id, self::ids((string) setting('loyalty_excl_products', '')), true) || in_array((int) $p->category_id, self::ids((string) setting('loyalty_excl_categories', '')), true)) return null;
+        $rate = self::earnRate();
+        $spend = max(0.0001, (float) setting('loyalty_earn_spend', 100));
+        foreach (DB::table('loyalty_rules')->where('active', true)->orderByDesc('priority')->get() as $r) {
+            $ids = self::ids((string) $r->scope_ids);
+            if (($r->scope === 'product' && in_array((int) $p->id, $ids, true)) || ($r->scope === 'category' && in_array((int) $p->category_id, $ids, true))) { $rate = (float) $r->rate / $spend; break; }
+        }
+        $t = ($u && self::active($u)) ? LoyaltyTiers::of($u) : LoyaltyTiers::base();
+
+        return $rate * ($t ? (float) $t->multiplier : 1.0);
+    }
+
+    /** Points a purchase of $cents would earn at $rate (points per 1.00). */
+    public static function estimate(int $cents, ?float $rate): int
+    {
+        return $rate ? max(0, self::round($cents / 100 * $rate)) : 0;
+    }
+
+    /** Estimated points for a cart summary (after discounts, excluding what is paid with points/cashback). Campaign bonuses are not included. */
+    public static function estimateCart(array $sum, ?User $u): int
+    {
+        if (! self::on() || ($u && ! self::active($u))) return 0;
+        $gross = max(1, (int) $sum['subtotal']);
+        $f = max(0, ($gross - (int) $sum['discount'] - (int) $sum['offer_discount'] - (int) ($sum['tier_discount'] ?? 0) - (int) ($sum['lpoints_value'] ?? 0) - (int) ($sum['lcash'] ?? 0)) / $gross);
+        $pts = 0.0;
+        foreach ($sum['lines'] as $l) {
+            if (! empty($l['gc']) || ($l['qty'] ?? 0) <= 0) continue;
+            $rate = self::productRate($l['p'], $u);
+            if ($rate) $pts += $l['total'] * $f / 100 * $rate;
+        }
+
+        return max(0, self::round($pts));
     }
 
     /** Value in cents of a number of points. */
@@ -347,7 +391,8 @@ final class Loyalty
         $tier = LoyaltyTiers::of($u);
         $mult = $tier ? (float) $tier->multiplier : 1.0;
         $rules = DB::table('loyalty_rules')->where('active', true)->orderByDesc('priority')->get();
-        $baseRate = (float) setting('loyalty_earn_rate', 1);
+        $baseRate = self::earnRate();
+        $blockSize = max(0.0001, (float) setting('loyalty_earn_spend', 100));
         $cbBase = self::cashbackOn() ? (float) setting('cashback_pct', 0) + ($tier ? (float) $tier->cashback_pct : 0) : 0;
         $lines = [];
         $pts = 0.0;
@@ -366,7 +411,7 @@ final class Loyalty
                 $ids = self::ids((string) $r->scope_ids);
                 $hit = $p && (($r->scope === 'product' && in_array((int) $p->id, $ids, true)) || ($r->scope === 'category' && in_array((int) $p->category_id, $ids, true)));
                 if ($hit) {
-                    $rate = (float) $r->rate;
+                    $rate = (float) $r->rate / $blockSize;
                     $extraCb = (float) $r->cashback_pct;
                     break;
                 }

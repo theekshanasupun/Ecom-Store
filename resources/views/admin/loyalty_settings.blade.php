@@ -19,8 +19,10 @@ $sel = fn ($key, $label, $opts, $o = []) => field_select($key, $label, $opts, se
   <p class="muted small">Customer groups: eligibility is limited to customer accounts; staff exclusion above. Currency is the store currency (Settings).</p></section>
 
 <section class="apanel" data-pane="earn" hidden><h2>Points earning</h2>
-  <div class="g2"><?= $txt('loyalty_earn_rate', 'Points per 1.00 spent (base rate)', ['type' => 'number', 'step' => '0.01', 'min' => '0', 'hint' => 'e.g. 1 = 1 point per 1.00 LKR. Product/category rates are under Campaigns & rules.']) ?>
+  <div class="g3"><?= $txt('loyalty_earn_spend', 'For every spend of', ['type' => 'number', 'step' => '0.01', 'min' => '0.01', 'hint' => 'Currency amount, e.g. 100']) ?>
+    <?= $txt('loyalty_earn_points', 'customers earn (points)', ['type' => 'number', 'step' => '0.01', 'min' => '0', 'hint' => 'e.g. 1 → spend 100, earn 1 point']) ?>
     <?= $sel('loyalty_round', 'Rounding', ['floor' => 'Round down', 'round' => 'Nearest', 'ceil' => 'Round up']) ?></div>
+  <p class="muted small">Product/category rates (Campaigns &amp; rules) are expressed per the same spend block.</p>
   <div class="g2"><?= $sel('loyalty_earn_status', 'Points become available when the order is', ['paid' => 'Paid', 'processing' => 'Processing', 'shipped' => 'Shipped', 'completed' => 'Completed']) ?>
     <?= $num('loyalty_hold_days', 'Extra hold after that (days, pending approval period)') ?></div>
   <div class="g2"><?= $txt('loyalty_excl_products', 'Excluded product IDs (comma)') ?><?= $txt('loyalty_excl_categories', 'Excluded department IDs (comma)') ?></div>

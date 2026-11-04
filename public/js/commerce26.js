@@ -48,11 +48,19 @@
     function match(v, o) { for (var k in v.opts) if (o[k] !== v.opts[k]) return false; return true; }
     function find(o) { for (var i = 0; i < D.variants.length; i++) if (match(D.variants[i], o)) return D.variants[i]; return null; }
     function fmt(c) { return money(c, D.sym, true); }
+    var earnBox = $('[data-earn]'), earnTxt = $('[data-earn-text]');
+    function earnUpdate(price) {
+      if (!earnBox || !D.loy) return;
+      var q = qty ? Math.max(1, parseInt(qty.value, 10) || 1) : 1, raw = price * q / 100 * D.loy.rate;
+      var pts = D.loy.mode === 'ceil' ? Math.ceil(raw - 1e-9) : (D.loy.mode === 'round' ? Math.round(raw) : Math.floor(raw + 1e-9));
+      earnBox.hidden = pts <= 0; if (pts <= 0) return;
+      earnTxt.innerHTML = D.loy.guest ? 'Earn <b>' + pts.toLocaleString() + '</b> ' + D.loy.name + ' points with this purchase · <a href="' + D.loy.login + '">sign in</a>' : 'You\'ll earn <b>' + pts.toLocaleString() + '</b> points with this purchase' + (q > 1 ? ' (' + q + ' items)' : '');
+    }
     function update() {
       var o = sel(), v = D.variants.length ? find(o) : null;
       var price = v ? v.price : D.base.price, cmp = v ? v.compare : D.base.compare, avail = v ? v.stock : D.base.avail, active = v ? v.active : true;
       if (D.variants.length && !v) { active = false; avail = 0; }
-      now.textContent = fmt(price);
+      now.textContent = fmt(price); earnUpdate(price);
       if (cmp > price) { was.hidden = false; was.textContent = fmt(cmp); save.hidden = false; save.textContent = 'Save ' + fmt(cmp - price) + ' · ' + Math.round(100 - price / cmp * 100) + '%'; }
       else { was.hidden = true; save.hidden = true; }
       if (sku) sku.textContent = (v && v.sku) ? 'SKU ' + v.sku : (D.base.sku ? 'SKU ' + D.base.sku : '');
@@ -76,6 +84,7 @@
       box.classList.remove('flash'); void box.offsetWidth; box.classList.add('flash');
     }
     form.addEventListener('change', function (e) { if (e.target.closest('.optset, .optsel')) update(); });
+    if (qty) { qty.addEventListener('input', update); form.addEventListener('click', function (e) { if (e.target.closest('[data-q]')) setTimeout(update, 0); }); }
     update();
   })();
 
@@ -198,7 +207,9 @@
 
     // ---- live summary updates: coupon / gift card / credit / shipping ----
     function refresh(r) {
+      var lb = $('[data-loy-box]', sumBox), lbOpen = lb ? lb.open : null;
       if (r.html != null) sumBox.innerHTML = r.html;
+      var lb2 = $('[data-loy-box]', sumBox); if (lb2 && lbOpen) lb2.open = true;
       var m = msg(); if (m) { m.textContent = r.error || ''; m.className = 'apply-msg' + (r.error ? '' : ' ok'); }
       var due = r.due || '', free = !!r.free, pay = $('[data-pay-section]'), note = $('[data-free-note]');
       if (pay) pay.hidden = free; if (note) note.hidden = !free;

@@ -16,7 +16,10 @@ $start = $p->priceInfo($opts);
 $tiers = \App\Services\Pricing::tiers($p);
 $offers = \App\Services\Offers::forPlacement('product', [], [], $p);
 \App\Services\Offers::seen($offers);
+$loyRate = \App\Services\Loyalty::productRate($p, auth()->user());
+$loyGuest = !auth()->check();
 $vjson = [
+  'loy' => $loyRate ? ['rate' => $loyRate, 'mode' => (string) setting('loyalty_round', 'floor'), 'guest' => $loyGuest, 'login' => url('login'), 'name' => \App\Services\Loyalty::name()] : null,
   'base' => ['price' => $start['price'], 'compare' => $start['compare'], 'sku' => $start['sku'], 'avail' => $avail >= PHP_INT_MAX ? -1 : $avail, 'instant' => (bool) $p['instant']],
   'sym' => (string) setting('currency_symbol', '$'), 'low' => (int) setting('low_stock', 3),
   'options' => array_map(fn ($o) => ['name' => $o['name'], 'values' => $o['values']], $p['options_list']),
@@ -47,6 +50,9 @@ $hexOf = fn ($o, $v) => ($c = $o['colors'][$v] ?? '') && preg_match('/^#[0-9a-f]
           <s class="pbox-was" data-was <?= $start['compare'] ? '' : 'hidden' ?>><?= $start['compare'] ? money($start['compare'], $p['type'] !== 'key') : '' ?></s>
           <span class="pbox-save" data-save <?= $start['compare'] ? '' : 'hidden' ?>><?= $start['compare'] ? 'Save ' . money($start['save'], true) . ' · ' . $start['pct'] . '%' : '' ?></span>
         </div>
+        <?php if ($loyRate): $ep = \App\Services\Loyalty::estimate($start['price'], $loyRate); ?>
+        <div class="loy-earn" data-earn <?= $ep > 0 ? '' : 'hidden' ?>><span>★</span> <span data-earn-text><?= $ep > 0 ? ($loyGuest ? 'Earn <b>' . number_format($ep) . '</b> ' . e(\App\Services\Loyalty::name()) . ' points with this purchase · <a href="' . e(url('login')) . '">sign in</a>' : 'You\'ll earn <b>' . number_format($ep) . '</b> points with this purchase') : '' ?></span></div>
+        <?php endif; ?>
         <div class="pbox-sub"><span data-sku><?= $start['sku'] ? 'SKU ' . e($start['sku']) : '' ?></span><?php if (setting('tax_rate') > 0): ?><span><?= (float) setting('tax_rate') ?>% <?= e(strtolower(setting('tax_label', 'tax'))) ?> added at checkout</span><?php endif; ?></div>
         <?php if ($tiers): ?><ul class="pbox-tiers"><?php foreach ($tiers as $t): ?><li><b>Buy <?= (int) $t['qty'] ?>+</b> · <?= $t['type'] === 'percent' ? (int) $t['value'] . '% off each' : money($t['value'], true) . ' off each' ?></li><?php endforeach; ?></ul><?php endif; ?>
       </div>

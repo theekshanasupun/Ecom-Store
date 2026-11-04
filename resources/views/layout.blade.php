@@ -31,6 +31,7 @@ $pagesFooter = \App\Models\Page::where('status', 'published')->where('in_footer'
 <link rel="stylesheet" href="<?= e(asset_v('css/store.css')) ?>">
 <link rel="stylesheet" href="<?= e(asset_v('css/store26.css')) ?>">
 <link rel="stylesheet" href="<?= e(asset_v('css/commerce26.css')) ?>">
+<link rel="stylesheet" href="<?= e(asset_v('css/loyalty27.css')) ?>">
 <style>:root{--accent:<?= e($accent) ?>;--accent-ink:<?= e(\App\Support\Art::ink($accent)) ?>}</style>
 </head>
 <body class="<?= $step ? 'is-checkout' : '' ?>">

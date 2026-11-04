@@ -31,6 +31,11 @@ Product types: **Physical**, **Key/code** and **Account** (delivered automatical
 ## Payments
 Admin → Settings → Payments: Stripe Checkout, PayPal, bank transfer, cash on delivery. Stripe webhook: `/pay/stripe/webhook` (event `checkout.session.completed`). Test with sandbox credentials first.
 
+## 2.7.1
+- Earning is now configured as **spend X → earn Y points** (default: spend 100, earn 1; Loyalty → Programme settings → Earning). Product/category rules use the same spend block.
+- Product pages show **“You'll earn N points”** (based on the price actually paid — sale/discounted price, not the list price; updates with variant and quantity; guests see a sign-in prompt).
+- Checkout has a **collapsible Rewards bar**: points you'll earn on the order plus redeem points/cashback for signed-in customers; guests see “Log in to redeem”.
+
 ## What's new in 2.7 — Loyalty & Rewards
 A full loyalty ecosystem built on the existing accounts, catalogue, cart, checkout, orders, payments and admin. **Three separate wallets** with their own ledgers, rules and expiry: **Loyalty points**, **Cashback** and **Store credit** (the 2.6 wallet is untouched).
 - **Customer area** (`/account/loyalty`): dashboard (points, lifetime/redeemed/pending/expired/expiring, cashback, store credit, tier + progress bar, promotions, badges, activity), digital membership card with QR + PNG download, wallet histories with filters, tiers, rewards marketplace (search/filter/sort, points + cash, VIP/limited-stock/limited-time rewards, voucher history & cancel), challenges, daily check-in streaks, spin-the-wheel, scratch & win, leaderboards, referrals (link, code, WhatsApp/social share, history, milestones), notification centre + preferences, terms/policies and help request.
