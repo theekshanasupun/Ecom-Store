@@ -31,6 +31,11 @@ Product types: **Physical**, **Key/code** and **Account** (delivered automatical
 ## Payments
 Admin → Settings → Payments: Stripe Checkout, PayPal, bank transfer, cash on delivery. Stripe webhook: `/pay/stripe/webhook` (event `checkout.session.completed`). Test with sandbox credentials first.
 
+## 2.7.5
+- **Rewards UI redesign**: product pages show an animated earn card (points, money value, your tier multiplier, progress toward your next reward, sign-in prompt for guests, a hint when a price is too low to earn). The checkout Rewards bar is a collapsible panel with “+N pts” / “−amount” pills, earn card, next-reward progress, a redeem slider with 25% / 50% / Max chips and a cashback toggle.
+- **Fix**: money formatting error in the browser (`str.indexOf is not a function`) that froze live prices and the **gift-card preview for amounts of 1,000 or more**; the preview now also shrinks long amounts and warns when the amount is outside the allowed range.
+- **Fix**: checkout summary no longer overflows laptop screens (sidebar width capped, order total font reduced).
+
 ## 2.7.1
 - Earning is now configured as **spend X → earn Y points** (default: spend 100, earn 1; Loyalty → Programme settings → Earning). Product/category rules use the same spend block.
 - Product pages show **“You'll earn N points”** (based on the price actually paid — sale/discounted price, not the list price; updates with variant and quantity; guests see a sign-in prompt).

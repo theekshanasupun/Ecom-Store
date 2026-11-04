@@ -131,6 +131,18 @@ final class Loyalty
         return max(0, self::round($pts));
     }
 
+    /** Cheapest active reward the customer cannot afford yet — the "next goal" shown next to earn estimates. */
+    public static function goal(?User $u, int $earn = 0): ?array
+    {
+        $bal = $u ? (int) $u->points : 0;
+        $r = DB::table('loyalty_rewards')->where('active', true)->where(fn ($q) => $q->whereNull('expires_at')->orWhere('expires_at', '>', now()))
+            ->where(fn ($q) => $q->whereNull('stock')->orWhere('stock', '>', 0))->where('points_cost', '>', $bal)->orderBy('points_cost')->first();
+        if (! $r) return null;
+        $total = $bal + $earn;
+
+        return ['name' => $r->name, 'cost' => (int) $r->points_cost, 'balance' => $bal, 'pct' => (int) min(100, floor($total / max(1, $r->points_cost) * 100)), 'unlock' => $total >= $r->points_cost, 'left' => max(0, $r->points_cost - $total)];
+    }
+
     /** Value in cents of a number of points. */
     public static function pointsValue(int $points): int
     {

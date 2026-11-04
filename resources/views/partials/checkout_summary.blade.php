@@ -43,23 +43,32 @@ $coupon = $sum['coupon'] ?? null;
   <?php if ($sum['credit_balance'] > 0): ?>
   <div class="co-apply-row"><label class="chk credit-chk"><input type="checkbox" data-apply-credit <?= $sum['use_credit'] ? 'checked' : '' ?>><i></i><span>Use my store credit <small><?= money($sum['credit_balance']) ?> available<?= $sum['credit'] > 0 ? ' · applying ' . money($sum['credit']) : '' ?></small></span></label></div>
   <?php endif; ?>
-  <?php if (\App\Services\Loyalty::on()): $lo = $sum['loyalty'] ?? ['on' => false]; $lu = auth()->user(); $earn = \App\Services\Loyalty::estimateCart($sum, $lu); $lname = \App\Services\Loyalty::name(); ?>
+  <?php if (\App\Services\Loyalty::on()): $lo = $sum['loyalty'] ?? ['on' => false]; $lu = auth()->user(); $earn = \App\Services\Loyalty::estimateCart($sum, $lu); $lname = \App\Services\Loyalty::name();
+    $goal = (!empty($lo['on']) && $earn > 0) ? \App\Services\Loyalty::goal($lu, $earn) : null; $pv = 100 / max(1, (float) setting('loyalty_redeem_rate', 100)); ?>
   <details class="loy-co" data-loy-box <?= (!empty($lo['on']) && ($lo['points'] > 0 || $lo['cash'] > 0)) ? 'open' : '' ?>>
-    <summary><span>★ <?= e($lname) ?></span><small><?php if ($earn > 0): ?>Earn <b><?= number_format($earn) ?></b> pts<?php endif; ?><?php if (!empty($lo['on'])): ?> · <?= number_format($lo['points_balance']) ?> pts to redeem<?php elseif (!$lu): ?> · Log in to redeem<?php endif; ?></small></summary>
+    <summary><span class="lc-ttl"><i class="lc-star">★</i> <?= e($lname) ?></span>
+      <span class="lc-pills"><?php if ($earn > 0): ?><em class="lc-earn">+<?= number_format($earn) ?> pts</em><?php endif; ?><?php if (!empty($lo['on']) && $lo['points'] > 0): ?><em class="lc-use">−<?= e(money($lo['points_value'], true)) ?></em><?php elseif (!$lu): ?><em class="lc-login">Log in to redeem</em><?php endif; ?></span></summary>
     <div class="loy-co-body">
+      <div class="lc-card">
+        <div><small>You'll earn on this order</small><b class="lc-big"><?= number_format($earn) ?> <span>points</span></b><?php if ($earn > 0): ?><small class="lc-val">≈ <?= e(money((int) floor($earn * $pv), true)) ?> off a future order · credited when completed</small><?php else: ?><small class="lc-val">Earn <?= e(rtrim(rtrim(number_format((float) setting('loyalty_earn_points', 1), 2), '0'), '.')) ?> point per <?= e(money((int) round((float) setting('loyalty_earn_spend', 100) * 100), true)) ?> spent.</small><?php endif; ?></div>
+      </div>
+      <?php if ($goal): ?><div class="lc-goal"><div class="le-bar"><i style="width:<?= (int) $goal['pct'] ?>%"></i></div><small><?= $goal['unlock'] ? '🎉 This order unlocks <b>' . e($goal['name']) . '</b>' : '<b>' . number_format($goal['left']) . '</b> pts to <b>' . e($goal['name']) . '</b> after this order' ?></small></div><?php endif; ?>
     <?php if (!$lu): ?>
-      <p class="muted small">You'll earn about <b><?= number_format($earn) ?></b> points on this order<?= $earn > 0 ? ' once you are a member' : '' ?>. <a href="<?= e(url('login')) ?>" data-keep-cart>Log in</a> or <a href="<?= e(url('register')) ?>">create an account</a> to earn and redeem points.</p>
+      <div class="lc-cta"><p class="muted small">Members redeem points for money off at checkout.</p><a class="btn btn-ghost" href="<?= e(url('login')) ?>">Log in to redeem</a><a class="btn btn-ghost" href="<?= e(url('register')) ?>">Join free</a></div>
     <?php elseif (empty($lo['on'])): ?>
-      <p class="muted small">Your rewards account is not active, so points can't be earned or redeemed on this order.</p>
+      <p class="muted small"><?= $lu->isStaff() && setting('loyalty_exclude_staff', '1') === '1' ? 'Staff accounts do not earn or redeem points — sign in with a customer account to try it.' : 'Your rewards account is suspended, so points can\'t be earned or redeemed. Contact us for help.' ?></p>
     <?php else: ?>
-      <p class="small">🎯 This order earns about <b><?= number_format($earn) ?> points</b> (credited after it is completed).</p>
-      <small class="muted">Balance: <b><?= number_format($lo['points_balance']) ?></b> points · worth <?= e(money(\App\Services\Loyalty::pointsValue($lo['points_balance']))) ?></small>
+      <div class="lc-bal"><span>Your balance</span><b><?= number_format($lo['points_balance']) ?> pts</b><small>≈ <?= e(money(\App\Services\Loyalty::pointsValue($lo['points_balance']), true)) ?></small></div>
       <?php if ($lo['blocked']): ?><p class="muted small"><?= e($lo['blocked']) ?></p>
-      <?php elseif ($lo['points_max'] > 0): ?>
-        <div class="apply-input"><input type="number" min="0" max="<?= (int) $lo['points_max'] ?>" step="1" value="<?= (int) $lo['points'] ?>" data-apply-points aria-label="Points to redeem" placeholder="Points to use"><button type="button" class="btn btn-ghost" data-points-set="<?= (int) $lo['points_max'] ?>">Use max</button><?php if ($lo['points'] > 0): ?><button type="button" class="btn btn-ghost" data-points-set="0">Clear</button><?php endif; ?></div>
-        <small class="muted">Redeem up to <?= number_format($lo['points_max']) ?> points (<?= e(money(\App\Services\Loyalty::pointsValue($lo['points_max']))) ?>)<?= $lo['points'] > 0 ? ' · applying ' . number_format($lo['points']) . ' = −' . e(money($lo['points_value'])) : '' ?></small>
-      <?php else: ?><p class="muted small">Minimum <?= number_format($lo['min']) ?> points to redeem.</p><?php endif; ?>
-      <?php if ($lo['cash_balance'] > 0): ?><label class="chk credit-chk" style="margin-top:8px"><input type="checkbox" data-apply-cashback <?= $lo['cash'] > 0 ? 'checked' : '' ?>><i></i><span>Use my cashback <small><?= money($lo['cash_balance']) ?> available<?= $lo['cash'] > 0 ? ' · applying ' . money($lo['cash']) : '' ?></small></span></label><?php endif; ?>
+      <?php elseif ($lo['points_max'] > 0): $mx = (int) $lo['points_max']; ?>
+        <div class="lc-redeem" data-pv="<?= e($pv) ?>" data-sym="<?= e(setting('currency_symbol', '$')) ?>">
+          <div class="lc-row"><span>Redeem points</span><b data-lc-out><?= number_format($lo['points']) ?> pts · −<?= e(money($lo['points_value'], true)) ?></b></div>
+          <input type="range" class="lc-range" min="0" max="<?= $mx ?>" step="1" value="<?= (int) $lo['points'] ?>" data-apply-points data-lc-range aria-label="Points to redeem">
+          <div class="lc-chips"><?php foreach ([0 => 'None', 25 => '25%', 50 => '50%', 100 => 'Max'] as $pc => $lb): $val = $pc === 100 ? $mx : (int) floor($mx * $pc / 100); if ($pc > 0 && $pc < 100 && $val < max(1, $lo['min'])) continue; ?><button type="button" class="<?= (int) $lo['points'] === $val ? 'on' : '' ?>" data-points-set="<?= $val ?>"><?= $lb ?></button><?php endforeach; ?></div>
+          <small class="muted">Up to <?= number_format($mx) ?> pts (<?= e(money(\App\Services\Loyalty::pointsValue($mx), true)) ?>) on this order</small>
+        </div>
+      <?php else: ?><p class="muted small">Minimum <?= number_format($lo['min']) ?> points to redeem<?= $lo['points_balance'] < $lo['min'] ? ' — you need ' . number_format($lo['min'] - $lo['points_balance']) . ' more.' : '.' ?></p><?php endif; ?>
+      <?php if ($lo['cash_balance'] > 0): ?><label class="chk credit-chk" style="margin-top:6px"><input type="checkbox" data-apply-cashback <?= $lo['cash'] > 0 ? 'checked' : '' ?>><i></i><span>Use my cashback <small><?= money($lo['cash_balance']) ?> available<?= $lo['cash'] > 0 ? ' · applying ' . money($lo['cash']) : '' ?></small></span></label><?php endif; ?>
     <?php endif; ?>
     </div>
   </details>

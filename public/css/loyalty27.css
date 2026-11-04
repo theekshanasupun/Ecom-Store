@@ -21,5 +21,42 @@
 .loy-dl{display:grid;grid-template-columns:auto 1fr;gap:6px 16px}.loy-dl dt{color:var(--mut)}.loy-dl dd{margin:0}.loy-pager{display:flex;gap:8px;margin-top:12px}
 .loy-co .apply-input input[type=number]{max-width:130px}
 @media(max-width:640px){.loy-hero{grid-template-columns:1fr;padding:20px}.mcard{flex-direction:column;align-items:flex-start}}
-.loy-earn{display:flex;gap:6px;align-items:center;margin:10px 0 0;padding:8px 14px;border-radius:12px;background:color-mix(in srgb,var(--accent) 12%,transparent);border:1px solid color-mix(in srgb,var(--accent) 40%,transparent);font-size:14px;width:fit-content;max-width:100%}.loy-earn b{color:var(--accent)}.loy-earn a{color:var(--accent)}
-details.loy-co{border:1px solid var(--line);border-radius:14px;margin:12px 0;background:var(--card2)}details.loy-co>summary{cursor:pointer;list-style:none;display:flex;justify-content:space-between;gap:10px;align-items:center;padding:12px 14px;font-weight:700}details.loy-co>summary::-webkit-details-marker{display:none}details.loy-co>summary small{color:var(--mut);font-weight:500;text-align:right}details.loy-co>summary small b{color:var(--accent)}details.loy-co>summary::after{content:"▾";margin-left:6px;transition:transform .2s}details.loy-co[open]>summary::after{transform:rotate(180deg)}.loy-co-body{padding:0 14px 14px;display:grid;gap:8px}
+/* gift card preview amount never clips */
+.gc-card{overflow:hidden;position:relative}.gc-card-amt{white-space:nowrap;max-width:100%}.gc-warn{display:block;color:#ff8d9b;margin-top:6px;min-height:0}.gc-warn:empty{display:none}
+/* ---- earn card on product pages ---- */
+.le{--tc:var(--accent);position:relative;margin:12px 0 0;padding:14px 16px;border-radius:18px;background:linear-gradient(135deg,color-mix(in srgb,var(--tc) 16%,#101014),#101014 70%);border:1px solid color-mix(in srgb,var(--tc) 45%,transparent);overflow:hidden;display:grid;gap:10px}
+.le::before{content:"";position:absolute;inset:-40% -10% auto auto;width:180px;height:180px;border-radius:50%;background:radial-gradient(circle,color-mix(in srgb,var(--tc) 35%,transparent),transparent 70%);pointer-events:none}
+.le-top{display:flex;align-items:center;gap:12px;position:relative}
+.le-star{flex:none;width:42px;height:42px;border-radius:14px;display:grid;place-items:center;font-size:20px;color:#0b0b0d;background:var(--tc);box-shadow:0 0 0 0 color-mix(in srgb,var(--tc) 60%,transparent);animation:lePulse 2.4s infinite}
+@keyframes lePulse{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--tc) 55%,transparent)}70%,100%{box-shadow:0 0 0 12px transparent}}
+.le-txt{flex:1;min-width:0}.le-txt small{display:block;color:var(--mut);font-size:12px}
+.le-txt>div{display:flex;align-items:baseline;gap:6px;flex-wrap:wrap}.le-pts{font:800 30px/1 var(--fd);color:var(--tc);letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.le-val{font-style:normal;font-size:12px;color:var(--mut);margin-left:4px}
+.le-tier{flex:none;font:700 11px var(--fm);letter-spacing:.06em;padding:5px 10px;border-radius:99px;background:color-mix(in srgb,var(--tc) 20%,transparent);color:var(--tc);border:1px solid color-mix(in srgb,var(--tc) 40%,transparent)}
+.le-bar{height:8px;border-radius:99px;background:#26262d;overflow:hidden;position:relative}.le-bar i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,var(--tc,var(--accent)),color-mix(in srgb,var(--tc,var(--accent)) 60%,#fff));transition:width .6s var(--ease)}
+.le-note{margin:0;font-size:13px;color:#cfcfd6;position:relative}.le-note b{color:var(--tc)}.le-note a{color:var(--tc);font-weight:700}
+.le.le-zero .le-pts{color:var(--mut)}.le.le-zero .le-star{background:#2a2a32;color:var(--mut);animation:none}.le.le-zero{background:#101014;border-style:dashed;border-color:#34343c}
+.le.le-pop .le-pts{animation:lePop .4s var(--ease)}@keyframes lePop{0%{transform:scale(.85)}60%{transform:scale(1.12)}100%{transform:none}}
+@media(prefers-reduced-motion:reduce){.le-star,.le.le-pop .le-pts{animation:none}}
+/* ---- collapsible rewards bar at checkout ---- */
+details.loy-co{border:1px solid color-mix(in srgb,var(--accent) 35%,var(--line));border-radius:16px;margin:12px 0;background:linear-gradient(135deg,color-mix(in srgb,var(--accent) 9%,#141418),#141418)}
+details.loy-co>summary{cursor:pointer;list-style:none;display:flex;justify-content:space-between;gap:10px;align-items:center;padding:12px 14px;font-weight:700}details.loy-co>summary::-webkit-details-marker{display:none}
+.lc-ttl{display:flex;align-items:center;gap:8px}.lc-star{font-style:normal;display:grid;place-items:center;width:26px;height:26px;border-radius:9px;background:var(--accent);color:#0b0b0d;font-size:14px}
+.lc-pills{display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end}.lc-pills em{font-style:normal;font:700 12px var(--fm);padding:4px 10px;border-radius:99px}
+.lc-earn{background:var(--accent);color:#0b0b0d}.lc-use{background:#ff5ca8;color:#0b0b0d}.lc-login{background:#26262d;color:var(--tx)}
+details.loy-co>summary::after{content:"▾";margin-left:4px;color:var(--mut);transition:transform .2s}details.loy-co[open]>summary::after{transform:rotate(180deg)}
+.loy-co-body{padding:0 14px 14px;display:grid;gap:12px}
+.lc-card{padding:12px 14px;border-radius:14px;background:#0f0f13;border:1px solid var(--line)}.lc-card small{display:block;color:var(--mut)}.lc-big{display:block;font:800 30px/1.1 var(--fd);color:var(--accent);margin:2px 0}.lc-big span{font:600 13px var(--fb);color:var(--mut)}
+.lc-goal{display:grid;gap:6px;font-size:13px}.lc-goal b{color:var(--accent)}
+.lc-bal{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;font-size:14px}.lc-bal span{color:var(--mut)}.lc-bal b{font-size:16px}.lc-bal small{color:var(--mut)}
+.lc-row{display:flex;justify-content:space-between;gap:8px;font-size:13px;margin-bottom:6px}.lc-row b{color:var(--accent)}
+.lc-range{-webkit-appearance:none;appearance:none;width:100%;height:8px;border-radius:99px;background:linear-gradient(90deg,var(--accent) var(--p,0%),#26262d var(--p,0%));padding:0!important;border:0!important;outline-offset:6px}
+.lc-range::-webkit-slider-thumb{-webkit-appearance:none;width:24px;height:24px;border-radius:50%;background:#fff;border:3px solid var(--accent);cursor:grab;box-shadow:0 2px 10px #0008}.lc-range::-moz-range-thumb{width:20px;height:20px;border-radius:50%;background:#fff;border:3px solid var(--accent);cursor:grab}
+.lc-chips{display:flex;gap:6px;margin:10px 0 6px;flex-wrap:wrap}.lc-chips button{border:1px solid var(--line);background:#0f0f13;color:var(--tx);border-radius:99px;padding:6px 14px;font:600 12px var(--fb);cursor:pointer}.lc-chips button.on,.lc-chips button:hover{background:var(--accent);color:#0b0b0d;border-color:var(--accent)}
+.lc-cta{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.lc-cta p{flex:1 1 100%;margin:0}
+/* ---- checkout summary must never overflow / oversized total ---- */
+.co26-layout{grid-template-columns:minmax(0,1.6fr) minmax(300px,440px)!important}.co26-aside,.co26 .summary,.co26 .summary>*{min-width:0}
+.total{gap:12px;flex-wrap:wrap}.total b{font-size:clamp(20px,1.9vw,26px)!important;letter-spacing:-.02em!important;white-space:nowrap}
+.co26 .summary{overflow:hidden}
+@media(max-width:900px){.co26-layout{grid-template-columns:1fr!important}}
+.sumrows .due dd,.sumrows.tender .due dd{font-size:clamp(17px,1.6vw,21px)!important;white-space:nowrap}

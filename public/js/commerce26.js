@@ -17,9 +17,8 @@
     setTimeout(function () { t.classList.add('out'); setTimeout(function () { t.remove(); }, 350); }, 2600);
   }
   function money(c, sym, short) {
-    var neg = c < 0; c = Math.abs(c); var s = (short && c % 100 === 0) ? String(c / 100) : (c / 100).toFixed(2);
-    s = s.replace(/\B(?=(\d{3})+(?!\d))/g, function (m, o, str) { return str.indexOf('.') > -1 && o > str.indexOf('.') ? '' : ','; });
-    return (neg ? '-' : '') + sym + s;
+    var neg = c < 0; c = Math.abs(Math.round(c)); var whole = String(Math.floor(c / 100)).replace(/\B(?=(\d{3})+(?!\d))/g, ','), cents = c % 100;
+    return (neg ? '-' : '') + sym + ((short && cents === 0) ? whole : whole + '.' + (cents < 10 ? '0' : '') + cents);
   }
   function applyCart(r) {
     if (!r) return;
@@ -48,13 +47,29 @@
     function match(v, o) { for (var k in v.opts) if (o[k] !== v.opts[k]) return false; return true; }
     function find(o) { for (var i = 0; i < D.variants.length; i++) if (match(D.variants[i], o)) return D.variants[i]; return null; }
     function fmt(c) { return money(c, D.sym, true); }
-    var earnBox = $('[data-earn]'), earnTxt = $('[data-earn-text]');
+    var earnBox = $('[data-earn]'), lePts = $('[data-le-pts]'), leVal = $('[data-le-val]'), leBar = $('[data-le-bar]'), leBarWrap = $('[data-le-barwrap]'), leNote = $('[data-le-note]'), leShown = null;
+    function countTo(el, to) { var from = leShown === null ? to : leShown; leShown = to; if (from === to) { el.textContent = to.toLocaleString(); return; } var t0 = null; function step(t) { if (t0 === null) t0 = t; var p = Math.min(1, (t - t0) / 450); el.textContent = Math.round(from + (to - from) * (1 - Math.pow(1 - p, 3))).toLocaleString(); if (p < 1) requestAnimationFrame(step); } requestAnimationFrame(step); }
     function earnUpdate(price) {
       if (!earnBox || !D.loy) return;
-      var q = qty ? Math.max(1, parseInt(qty.value, 10) || 1) : 1, raw = price * q / 100 * D.loy.rate;
-      var pts = D.loy.mode === 'ceil' ? Math.ceil(raw - 1e-9) : (D.loy.mode === 'round' ? Math.round(raw) : Math.floor(raw + 1e-9));
-      earnBox.hidden = pts <= 0; if (pts <= 0) return;
-      earnTxt.innerHTML = D.loy.guest ? 'Earn <b>' + pts.toLocaleString() + '</b> ' + D.loy.name + ' points with this purchase · <a href="' + D.loy.login + '">sign in</a>' : 'You\'ll earn <b>' + pts.toLocaleString() + '</b> points with this purchase' + (q > 1 ? ' (' + q + ' items)' : '');
+      var L = D.loy, q = qty ? Math.max(1, parseInt(qty.value, 10) || 1) : 1, raw = price * q / 100 * L.rate;
+      var pts = L.mode === 'ceil' ? Math.ceil(raw - 1e-9) : (L.mode === 'round' ? Math.round(raw) : Math.floor(raw + 1e-9));
+      earnBox.classList.toggle('le-zero', pts <= 0);
+      countTo(lePts, Math.max(0, pts)); earnBox.classList.remove('le-pop'); void earnBox.offsetWidth; earnBox.classList.add('le-pop');
+      leVal.textContent = pts > 0 ? '≈ ' + fmt(Math.floor(pts * L.pv)) + ' off a future order' : '';
+      var note = '';
+      if (pts <= 0) {
+        var need = Math.max(0, Math.ceil(L.spend / L.pts * 1 - 1e-9));
+        note = 'Earn <b>' + L.pts + '</b> point' + (L.pts === 1 ? '' : 's') + ' for every <b>' + fmt(Math.round(L.spend * 100)) + '</b> you spend' + (price * q < L.spend * 100 ? ' — add more to your cart to start earning.' : '.');
+        if (leBarWrap) leBarWrap.hidden = true;
+      } else if (L.guest) {
+        note = '<a href="' + L.login + '">Sign in</a> or <a href="' + L.join + '">join free</a> to collect these points' + (q > 1 ? ' (' + q + ' items)' : '') + '.';
+        if (leBarWrap) leBarWrap.hidden = true;
+      } else if (L.goal) {
+        var tot = L.bal + pts, pct = Math.min(100, Math.floor(tot / L.goal.cost * 100));
+        if (leBarWrap) leBarWrap.hidden = false; if (leBar) leBar.style.width = pct + '%';
+        note = tot >= L.goal.cost ? '🎉 You\'ll be able to claim <b>' + L.goal.name + '</b>' : '<b>' + (L.goal.cost - tot).toLocaleString() + '</b> pts from <b>' + L.goal.name + '</b> after this order';
+      } else { if (leBarWrap) leBarWrap.hidden = true; note = 'Points are added after your order is completed' + (q > 1 ? ' (' + q + ' items)' : '') + '.'; }
+      leNote.innerHTML = note;
     }
     function update() {
       var o = sel(), v = D.variants.length ? find(o) : null;
@@ -122,6 +137,11 @@
       var cu = $('input[name=custom]', gc), r = $('input[name=amount]:checked', gc), v = 0;
       if (cu && cu.value) v = Math.round(parseFloat(cu.value) * 100); else if (r) v = +r.value;
       amt.textContent = v > 0 ? money(v, sym, true) : '—';
+      var len = amt.textContent.length; amt.style.fontSize = len > 12 ? 'clamp(18px,2.6vw,26px)' : (len > 9 ? 'clamp(24px,3.4vw,36px)' : '');
+      if (cu) { var mn = parseFloat(cu.min) || 0, mx = parseFloat(cu.max) || 0, w = $('[data-gc-warn]', gc);
+        if (!w) { w = document.createElement('small'); w.setAttribute('data-gc-warn', ''); w.className = 'gc-warn'; cu.closest('.gc-amounts').insertAdjacentElement('afterend', w); }
+        var val = cu.value ? parseFloat(cu.value) : null;
+        w.textContent = (val !== null && ((mx && val > mx) || (mn && val < mn))) ? 'Choose an amount between ' + money(mn * 100, sym, true) + ' and ' + money(mx * 100, sym, true) + '.' : ''; }
       var dsg = $('input[name=design]:checked', gc); if (dsg) { card.style.setProperty('--g1', dsg.dataset.c1); card.style.setProperty('--g2', dsg.dataset.c2); card.style.setProperty('--gfg', dsg.dataset.fg); }
       var n = $('input[name=to_name]', gc).value; to.textContent = n ? 'For ' + n : '';
     }
@@ -227,6 +247,7 @@
       if (e.target.hasAttribute('data-apply-points')) apply('points', { points: parseInt(e.target.value, 10) || 0 });
       if (e.target.hasAttribute('data-apply-cashback')) apply('cashback', { on: e.target.checked ? 1 : 0 });
     });
+    sumBox.addEventListener('input', function (e) { var r = e.target; if (!r.hasAttribute || !r.hasAttribute('data-lc-range')) return; var w = r.closest('.lc-redeem'), out = $('[data-lc-out]', w), pts = parseInt(r.value, 10) || 0; out.textContent = pts.toLocaleString() + ' pts · −' + money(Math.floor(pts * parseFloat(w.dataset.pv)), w.dataset.sym, true); r.style.setProperty('--p', (r.max > 0 ? pts / r.max * 100 : 0) + '%'); });
     sumBox.addEventListener('click', function (e) { var b = e.target.closest('[data-points-set]'); if (b) apply('points', { points: parseInt(b.dataset.pointsSet, 10) || 0 }); });
     sumBox.addEventListener('change', function (e) { if (e.target.hasAttribute('data-apply-credit')) apply('credit', { on: e.target.checked ? 1 : 0 }); });
     $$('input[name=ship]', form).forEach(function (r) { r.addEventListener('change', function () { apply('ship', { id: r.value }); }); });

@@ -16,10 +16,16 @@ $start = $p->priceInfo($opts);
 $tiers = \App\Services\Pricing::tiers($p);
 $offers = \App\Services\Offers::forPlacement('product', [], [], $p);
 \App\Services\Offers::seen($offers);
-$loyRate = \App\Services\Loyalty::productRate($p, auth()->user());
-$loyGuest = !auth()->check();
+$loyUser = auth()->user();
+$loyRate = \App\Services\Loyalty::productRate($p, $loyUser);
+$loyGuest = !$loyUser;
+$loyTier = ($loyUser && \App\Services\Loyalty::active($loyUser)) ? \App\Services\LoyaltyTiers::of($loyUser) : null;
+$loyEarn = $loyRate ? \App\Services\Loyalty::estimate($start['price'], $loyRate) : 0;
+$loyGoal = $loyRate && !$loyGuest ? \App\Services\Loyalty::goal($loyUser, $loyEarn) : null;
 $vjson = [
-  'loy' => $loyRate ? ['rate' => $loyRate, 'mode' => (string) setting('loyalty_round', 'floor'), 'guest' => $loyGuest, 'login' => url('login'), 'name' => \App\Services\Loyalty::name()] : null,
+  'loy' => $loyRate ? ['rate' => $loyRate, 'mode' => (string) setting('loyalty_round', 'floor'), 'guest' => $loyGuest, 'login' => url('login'), 'join' => url('register'), 'name' => \App\Services\Loyalty::name(),
+    'pv' => 100 / max(1, (float) setting('loyalty_redeem_rate', 100)), 'spend' => (float) setting('loyalty_earn_spend', 100), 'pts' => (float) setting('loyalty_earn_points', 1),
+    'bal' => $loyGuest ? 0 : (int) $loyUser->points, 'goal' => $loyGoal ? ['name' => $loyGoal['name'], 'cost' => $loyGoal['cost']] : null, 'tier' => $loyTier ? ['name' => $loyTier->name, 'mult' => (float) $loyTier->multiplier, 'color' => $loyTier->color] : null] : null,
   'base' => ['price' => $start['price'], 'compare' => $start['compare'], 'sku' => $start['sku'], 'avail' => $avail >= PHP_INT_MAX ? -1 : $avail, 'instant' => (bool) $p['instant']],
   'sym' => (string) setting('currency_symbol', '$'), 'low' => (int) setting('low_stock', 3),
   'options' => array_map(fn ($o) => ['name' => $o['name'], 'values' => $o['values']], $p['options_list']),
@@ -50,8 +56,14 @@ $hexOf = fn ($o, $v) => ($c = $o['colors'][$v] ?? '') && preg_match('/^#[0-9a-f]
           <s class="pbox-was" data-was <?= $start['compare'] ? '' : 'hidden' ?>><?= $start['compare'] ? money($start['compare'], $p['type'] !== 'key') : '' ?></s>
           <span class="pbox-save" data-save <?= $start['compare'] ? '' : 'hidden' ?>><?= $start['compare'] ? 'Save ' . money($start['save'], true) . ' · ' . $start['pct'] . '%' : '' ?></span>
         </div>
-        <?php if ($loyRate): $ep = \App\Services\Loyalty::estimate($start['price'], $loyRate); ?>
-        <div class="loy-earn" data-earn <?= $ep > 0 ? '' : 'hidden' ?>><span>★</span> <span data-earn-text><?= $ep > 0 ? ($loyGuest ? 'Earn <b>' . number_format($ep) . '</b> ' . e(\App\Services\Loyalty::name()) . ' points with this purchase · <a href="' . e(url('login')) . '">sign in</a>' : 'You\'ll earn <b>' . number_format($ep) . '</b> points with this purchase') : '' ?></span></div>
+        <?php if ($loyRate): ?>
+        <div class="le" data-earn style="--tc:<?= e($loyTier->color ?? 'var(--accent)') ?>">
+          <div class="le-top"><span class="le-star" aria-hidden="true">★</span>
+            <div class="le-txt"><small data-le-label><?= e(\App\Services\Loyalty::name()) ?> · earn with this purchase</small><div><b class="le-pts" data-le-pts><?= number_format($loyEarn) ?></b> <span>points</span><em class="le-val" data-le-val></em></div></div>
+            <?php if ($loyTier): ?><span class="le-tier" title="Your tier multiplier">★ <?= e($loyTier->name) ?> ×<?= rtrim(rtrim(number_format((float) $loyTier->multiplier, 2), '0'), '.') ?></span><?php endif; ?></div>
+          <div class="le-bar" data-le-barwrap <?= $loyGoal ? '' : 'hidden' ?>><i data-le-bar style="width:<?= (int) ($loyGoal['pct'] ?? 0) ?>%"></i></div>
+          <p class="le-note" data-le-note></p>
+        </div>
         <?php endif; ?>
         <div class="pbox-sub"><span data-sku><?= $start['sku'] ? 'SKU ' . e($start['sku']) : '' ?></span><?php if (setting('tax_rate') > 0): ?><span><?= (float) setting('tax_rate') ?>% <?= e(strtolower(setting('tax_label', 'tax'))) ?> added at checkout</span><?php endif; ?></div>
         <?php if ($tiers): ?><ul class="pbox-tiers"><?php foreach ($tiers as $t): ?><li><b>Buy <?= (int) $t['qty'] ?>+</b> · <?= $t['type'] === 'percent' ? (int) $t['value'] . '% off each' : money($t['value'], true) . ' off each' ?></li><?php endforeach; ?></ul><?php endif; ?>
