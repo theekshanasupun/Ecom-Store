@@ -26,6 +26,7 @@ $ic = [
     'page' => 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M8 13h8M8 17h8',
     'cog' => 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z',
     'team' => 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1',
+    'palette' => 'M12 3a9 9 0 1 0 0 18c1.1 0 2-.9 2-2 0-.5-.2-1-.5-1.3-.3-.4-.5-.8-.5-1.3 0-1.1.9-2 2-2H17a4 4 0 0 0 4-4c0-4.4-4-8-9-8zM7.5 12a1 1 0 1 0 0-2 1 1 0 0 0 0 2M10 8a1 1 0 1 0 0-2 1 1 0 0 0 0 2M15 8a1 1 0 1 0 0-2 1 1 0 0 0 0 2',
     'sys' => 'M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3',
 ];
 // group key => [label, icon, [[path, label, icon, adminOnly]...]]
@@ -38,7 +39,7 @@ $groups = [
         ['admin/loyalty/campaigns', 'Campaigns & rules', 'tag', true], ['admin/loyalty/challenges', 'Gamification', 'star', true], ['admin/loyalty/referrals', 'Referrals', 'users', false], ['admin/loyalty/workflows', 'Automation', 'mail', true],
         ['admin/loyalty/segments', 'Segments', 'users', false], ['admin/loyalty/reports', 'Reports', 'chart', false], ['admin/loyalty/security', 'Security & fraud', 'shield', false], ['admin/loyalty/settings', 'Programme settings', 'cog', true]]],
     'marketing' => ['Marketing', 'mail', [['admin/automations', 'Email automations', 'mail', false], ['admin/newsletters', 'Newsletters', 'news', false], ['admin/subscribers', 'Subscribers', 'bell', false], ['admin/popups', 'Popups', 'popup', false]]],
-    'content' => ['Content', 'page', [['admin/builder/home', 'Page builder', 'builder', false], ['admin/pages', 'Pages', 'page', false]]],
+    'content' => ['Content', 'page', [['admin/builder/home', 'Page builder', 'builder', false], ['admin/pages', 'Pages', 'page', false], ['admin/themes', 'Themes', 'palette', true]]],
     'system' => ['System', 'cog', [['admin/settings', 'Settings', 'cog', true], ['admin/users', 'Team', 'team', true], ['admin/system', 'System & updates', 'sys', true]]],
 ];
 $allPaths = [];

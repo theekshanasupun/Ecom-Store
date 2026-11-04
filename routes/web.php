@@ -266,6 +266,8 @@ Route::prefix('admin')->group(function () {
             Route::post('{e}/{id}/delete', [$L, 'crudDelete'])->where('e', $ent)->whereNumber('id');
         });
         Route::middleware('admin')->group(function () {
+            Route::get('themes', [A\Themes::class, 'index']);
+            Route::post('themes', [A\Themes::class, 'save']);
             Route::get('settings', [A\SettingsController::class, 'index']);
             Route::post('settings', [A\SettingsController::class, 'save']);
             Route::post('settings/test-mail', [A\SettingsController::class, 'testMail']);

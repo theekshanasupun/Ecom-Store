@@ -47,6 +47,9 @@ final class Settings
             // social login
             'login_google_on' => '0', 'google_id' => '', 'google_secret' => '', 'login_facebook_on' => '0', 'facebook_id' => '', 'facebook_secret' => '',
             'login_github_on' => '0', 'github_id' => '', 'github_secret' => '', 'login_discord_on' => '0', 'discord_id' => '', 'discord_secret' => '',
+            // v3.0 themes
+            'theme_mode' => 'auto', 'theme_toggle' => '1', 'theme_light_bg' => '#faf7f2', 'theme_light_surface' => '#ffffff', 'theme_light_text' => '#1c1917',
+            'theme_light_accent' => '', 'theme_light_font' => 'fraunces', 'theme_light_radius' => 'soft', 'theme_light_logo' => '',
             // page builder / popups / automations
             'home_use_builder' => '0', 'home_builder' => '[]', 'popups_on' => '1', 'automations_autorun' => '1', 'automations_last_run' => '',
         ];
