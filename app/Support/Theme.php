@@ -95,7 +95,7 @@ final class Theme
             'color-scheme' => 'light', '--bg' => $bg, '--card' => $sf, '--card2' => self::mix($bg, $tx, 0.04), '--well' => $sf,
             '--line' => self::mix($bg, $tx, 0.12), '--line2' => self::mix($bg, $tx, 0.22),
             '--tx' => $tx, '--tx2' => self::mix($tx, $bg, 0.22), '--mut' => self::mix($tx, $bg, 0.42), '--inv' => $bg,
-            '--accent' => $ac, '--accent-ink' => Art::ink($ac),
+            '--accent' => $ac, '--accent-ink' => Art::ink($ac), '--c' => $ac, '--ink' => Art::ink($ac),
             '--fd' => $fd, '--fb' => $fb, '--fm' => $fb, '--r' => $rc, '--rb' => $rb,
         ];
         $o = '';

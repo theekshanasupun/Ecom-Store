@@ -57,7 +57,7 @@ html[data-theme=light] .panel{border-radius:calc(var(--r) + 6px)}
 html[data-theme=light] .feature-bar,html[data-theme=light] .ftr-news{border-radius:var(--r)}
 html[data-theme=light] .feature-bar{background:var(--card);border:1px solid var(--line)}
 html[data-theme=light] .ftr-news{background:linear-gradient(135deg,var(--card),var(--card2));box-shadow:var(--shadow)}
-html[data-theme=light] .drawer{box-shadow:-30px 0 60px -30px rgba(60,40,20,.35)}
+html[data-theme=light] .drawer.open{box-shadow:-30px 0 60px -30px rgba(60,40,20,.35)}
 html[data-theme=light] .scrim,html[data-theme=light] .pop-scrim{background:rgba(28,25,23,.38)}
 html[data-theme=light] .toast{background:var(--tx);color:var(--inv);border-radius:var(--rb);box-shadow:var(--shadow)}
 html[data-theme=light] .pdp-stage svg{filter:drop-shadow(0 22px 24px rgba(60,40,20,.22))}
