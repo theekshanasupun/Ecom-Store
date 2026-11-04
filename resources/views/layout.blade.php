@@ -15,13 +15,14 @@ $cartCount = Cart::count();
 $accent = preg_match('/^#[0-9a-f]{6}$/i', (string) setting('accent')) ? setting('accent') : '#c6ff3d';
 $pagesFooter = \App\Models\Page::where('status', 'published')->where('in_footer', true)->orderBy('id')->get(['title', 'slug'])->all();
 ?><!doctype html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title><?= e($fullTitle) ?></title>
 <meta name="description" content="<?= e($meta['description'] ?? setting('meta_description')) ?>">
 <meta name="theme-color" content="#0b0b0d">
+<?= \App\Support\Theme::bootScript() ?>
 <meta property="og:title" content="<?= e($pageTitle) ?>">
 <meta property="og:site_name" content="<?= e($name) ?>">
 <?php if (setting('favicon')): ?><link rel="icon" href="<?= e(upload_url(setting('favicon'))) ?>"><link rel="apple-touch-icon" href="<?= e(upload_url(setting('favicon'))) ?>"><?php else: ?><link rel="icon" href="data:image/svg+xml,<?= rawurlencode('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="9" fill="#0b0b0d"/><circle cx="16" cy="16" r="7" fill="' . $accent . '"/></svg>') ?>"><?php endif; ?>
@@ -32,7 +33,8 @@ $pagesFooter = \App\Models\Page::where('status', 'published')->where('in_footer'
 <link rel="stylesheet" href="<?= e(asset_v('css/store26.css')) ?>">
 <link rel="stylesheet" href="<?= e(asset_v('css/commerce26.css')) ?>">
 <link rel="stylesheet" href="<?= e(asset_v('css/loyalty27.css')) ?>">
-<style>:root{--accent:<?= e($accent) ?>;--accent-ink:<?= e(\App\Support\Art::ink($accent)) ?>}</style>
+<link rel="stylesheet" href="<?= e(asset_v('css/theme-light.css')) ?>">
+<style>:root{--accent:<?= e($accent) ?>;--accent-ink:<?= e(\App\Support\Art::ink($accent)) ?>}<?= \App\Support\Theme::css() ?></style>
 </head>
 <body class="<?= $step ? 'is-checkout' : '' ?>">
 <?= \App\Support\Seo::bodyStart() ?>
@@ -70,14 +72,14 @@ if ($annOk):
 <?php endif; ?>
 
 <header class="hdr" id="hdr">
-  <a class="logo" href="<?= e(url('')) ?>" aria-label="<?= e($name) ?> home"><?php if (setting('logo')): ?><img src="<?= e(upload_url(setting('logo'))) ?>" alt="<?= e($name) ?>"><?php else: ?><?= e(strtoupper($name)) ?><?php endif; ?></a>
+  <a class="logo" href="<?= e(url('')) ?>" aria-label="<?= e($name) ?> home"><?php if (setting('logo')): ?><img class="logo-d" src="<?= e(upload_url(setting('logo'))) ?>" alt="<?= e($name) ?>"><?php if (setting('theme_light_logo')): ?><img class="logo-l" src="<?= e(upload_url(setting('theme_light_logo'))) ?>" alt="<?= e($name) ?>"><?php endif; ?><?php else: ?><?= e(strtoupper($name)) ?><?php endif; ?></a>
   <?php if ($step): ?>
   <ol class="steps" aria-label="Checkout steps">
     <li class="<?= $step >= 1 ? 'on' : '' ?>"><a href="<?= e(url('cart')) ?>"><b>1</b> Cart</a></li><li class="sep"></li>
     <li class="<?= $step >= 2 ? 'on' : '' ?>"><b>2</b> Details</li><li class="sep"></li>
     <li class="<?= $step >= 3 ? 'on' : '' ?>"><b>3</b> Payment</li>
   </ol>
-  <nav class="nav nav-right"><?php foreach ($cats as $c): ?><a href="<?= e(url('shop/' . $c['slug'])) ?>"><?= e($c['name']) ?></a><?php endforeach; ?></nav>
+  <nav class="nav nav-right"><?php foreach ($cats as $c): ?><a href="<?= e(url('shop/' . $c['slug'])) ?>"><?= e($c['name']) ?></a><?php endforeach; ?><?php if (\App\Support\Theme::toggleOn()): ?><button class="icon-btn theme-toggle" type="button" id="theme-toggle" aria-label="Switch to light theme" aria-pressed="false" title="Switch theme"><svg class="ti-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg><svg class="ti-moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button><?php endif; ?></nav>
   <?php else: ?>
   <nav class="nav" id="nav">
     <a href="<?= e(url('')) ?>" class="<?= $path === '/' ? 'on' : '' ?>">All</a>
@@ -88,6 +90,7 @@ if ($annOk):
     <?php if ($user && $user->isStaff()): ?><a class="mob-only" href="<?= e(url('admin')) ?>">Admin panel</a><?php endif; ?>
   </nav>
   <div class="hdr-actions">
+    <?php if (\App\Support\Theme::toggleOn()): ?><button class="icon-btn theme-toggle" type="button" id="theme-toggle" aria-label="Switch to light theme" aria-pressed="false" title="Switch theme"><svg class="ti-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg><svg class="ti-moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button><?php endif; ?>
     <button class="icon-btn" id="search-open" aria-label="Search"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></button>
     <?php if ($user): ?>
     <details class="acct desk" id="acct"><summary class="icon-btn" aria-label="Account menu"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/></svg></summary>

@@ -1,0 +1,87 @@
+/* KIOSK v3.0 — light theme: warm, airy, editorial. Variables (palette, fonts, radii) are emitted by App\Support\Theme::css(). */
+.theme-toggle .ti-moon{display:none}
+html[data-theme=light] .theme-toggle .ti-sun{display:none}html[data-theme=light] .theme-toggle .ti-moon{display:block}
+.logo .logo-l{display:none}html[data-theme=light] .logo:has(.logo-l) .logo-l{display:block}html[data-theme=light] .logo:has(.logo-l) .logo-d{display:none}
+html{transition:background-color .3s}
+
+/* tokens that are not derived by Theme::css() */
+html[data-theme=light]{--bad:#b3261e;--warn:#9a5b00;--accent-tx:var(--tx);--accent-bd:color-mix(in srgb,var(--accent) 40%,var(--line));
+--ok-bg:#e8f5ec;--ok-bd:#b6dfc1;--ok-tx:#14532d;--err-bg:#fdecec;--err-bd:#f4c2c2;--err-tx:#8c1d18;--info-bg:#e9f1fb;--info-bd:#bcd3ee;--info-tx:#1a4a7a;--warn-bg:#fff4dc;--key-bg:#efeafc;--key-tx:#5b3fc4;
+--shadow:0 18px 40px -22px rgba(60,40,20,.28)}
+html[data-theme=light] body{letter-spacing:.005em}
+
+/* typography — serif display, sentence case, lighter weights */
+html[data-theme=light] .mega,html[data-theme=light] .h1,html[data-theme=light] .h2,html[data-theme=light] .h3,html[data-theme=light] .panel-title,html[data-theme=light] .also-card b,html[data-theme=light] .bb-h,html[data-theme=light] .total b,html[data-theme=light] .loy-bal b,html[data-theme=light] .ftr-news h3,html[data-theme=light] .drawer-head h2,html[data-theme=light] .logo{font-weight:600}
+html[data-theme=light] .price,html[data-theme=light] .pdp-price,html[data-theme=light] .cline h3,html[data-theme=light] .cline-price,html[data-theme=light] .dtotal b,html[data-theme=light] .pbox-now,html[data-theme=light] .sumrows .due dd,html[data-theme=light] .acct-stats b,html[data-theme=light] .gc-card-amt,html[data-theme=light] .lc-big,html[data-theme=light] .le-pts,html[data-theme=light] .mcard b,html[data-theme=light] .offer header h3,html[data-theme=light] .bb-plan .pr,html[data-theme=light] .pop-h{font-weight:600}
+html[data-theme=light] .mega{text-transform:none;letter-spacing:-.025em;line-height:.98;font-size:clamp(44px,9.4vw,132px)}
+html[data-theme=light] .hero-h{font-size:clamp(42px,8.6vw,120px);line-height:1}
+html[data-theme=light] .cart-mega{font-size:clamp(30px,6.4vw,92px)}
+html[data-theme=light] .h1{letter-spacing:-.015em;line-height:1.04}
+html[data-theme=light] .h2{letter-spacing:-.02em;line-height:1.02;font-size:clamp(30px,5vw,64px)}
+html[data-theme=light] .panel-title{letter-spacing:-.015em}
+html[data-theme=light] .logo{letter-spacing:.12em;text-transform:uppercase;font-size:20px}
+html[data-theme=light] .ftr-ghost{font-weight:500;letter-spacing:-.02em;color:color-mix(in srgb,var(--tx) 6%,var(--bg))}
+html[data-theme=light] .eyebrow,html[data-theme=light] .eyebrow-s,html[data-theme=light] .mono,html[data-theme=light] .steps,html[data-theme=light] .ticker{font-family:var(--fb);font-weight:600;letter-spacing:.14em}
+html[data-theme=light] .eyebrow.lime,html[data-theme=light] .lime{color:var(--accent)}
+html[data-theme=light] .lede,html[data-theme=light] .prose{color:var(--tx2)}
+
+/* header + chrome */
+html[data-theme=light] .hdr{background:color-mix(in srgb,var(--bg) 82%,transparent)}
+html[data-theme=light] .hdr.stuck{box-shadow:0 1px 0 var(--line),0 10px 30px -22px rgba(60,40,20,.3)}
+html[data-theme=light] .nav a{color:var(--tx2);font-weight:500}
+html[data-theme=light] .icon-btn{background:var(--card);border-radius:var(--rb);width:40px;height:40px}
+html[data-theme=light] .icon-btn:hover{color:var(--accent);border-color:var(--accent)}
+html[data-theme=light] .cart-btn{background:var(--tx);color:var(--inv);border-radius:var(--rb)}
+html[data-theme=light] .count{background:var(--accent);color:var(--accent-ink)}
+html[data-theme=light] .ticker{background:var(--tx);color:var(--inv)}
+html[data-theme=light] .acct-menu{box-shadow:var(--shadow)}
+
+/* buttons, chips, fields — controlled by the admin "roundness" option */
+html[data-theme=light] .btn,html[data-theme=light] .pill,html[data-theme=light] .chip,html[data-theme=light] .sortf select,html[data-theme=light] .lnk-btn,html[data-theme=light] .authtabs,html[data-theme=light] .loy-switch a,html[data-theme=light] .loy-filters a,html[data-theme=light] .lc-chips button{border-radius:var(--rb)}
+html[data-theme=light] input:not([type=checkbox]):not([type=radio]):not([type=range]),html[data-theme=light] select,html[data-theme=light] textarea,html[data-theme=light] .news-form input[type=email],html[data-theme=light] .bb-news input[type=email]{border-radius:var(--rb);background:var(--well);border-color:var(--line2)}
+html[data-theme=light] textarea{border-radius:min(var(--rb),16px)}
+html[data-theme=light] .btn{font-weight:600;letter-spacing:.01em;color:var(--accent-ink)}
+html[data-theme=light] .btn:hover{box-shadow:0 12px 26px -14px var(--accent)}
+html[data-theme=light] .btn-ghost{color:var(--tx);border-color:var(--line2);background:transparent}
+html[data-theme=light] .btn-ghost:hover{border-color:var(--tx);background:var(--card)}
+html[data-theme=light] .btn-dark,html[data-theme=light] .bb-banner .btn{background:var(--tx);color:var(--inv)}
+html[data-theme=light] .chip{background:var(--card);border-color:var(--line2);color:var(--tx2)}
+html[data-theme=light] .chip.on{color:var(--ink,var(--accent-ink))}
+html[data-theme=light] .count.bump{animation:bump .4s var(--ease)}
+
+/* surfaces: white cards, hairline borders, soft shadows */
+html[data-theme=light] .card,html[data-theme=light] .pcard,html[data-theme=light] .apanel,html[data-theme=light] .drawer,html[data-theme=light] .acct-menu{border:1px solid var(--line)}
+html[data-theme=light] .card,html[data-theme=light] .pcard{border-radius:var(--r);box-shadow:0 1px 0 rgba(60,40,20,.03)}
+html[data-theme=light] .pcard:hover{box-shadow:var(--shadow)}
+html[data-theme=light] .panel{border-radius:calc(var(--r) + 6px)}
+html[data-theme=light] .feature-bar,html[data-theme=light] .ftr-news{border-radius:var(--r)}
+html[data-theme=light] .feature-bar{background:var(--card);border:1px solid var(--line)}
+html[data-theme=light] .ftr-news{background:linear-gradient(135deg,var(--card),var(--card2));box-shadow:var(--shadow)}
+html[data-theme=light] .drawer{box-shadow:-30px 0 60px -30px rgba(60,40,20,.35)}
+html[data-theme=light] .scrim,html[data-theme=light] .pop-scrim{background:rgba(28,25,23,.38)}
+html[data-theme=light] .toast{background:var(--tx);color:var(--inv);border-radius:var(--rb);box-shadow:var(--shadow)}
+html[data-theme=light] .pdp-stage svg{filter:drop-shadow(0 22px 24px rgba(60,40,20,.22))}
+html[data-theme=light] .keybox,html[data-theme=light] .bankinfo pre,html[data-theme=light] .bankpre{background:var(--card2);color:var(--tx)}
+html[data-theme=light] .count,html[data-theme=light] .mini-media em{font-weight:700}
+html[data-theme=light] .mini-media em{background:var(--tx);color:var(--inv)}
+html[data-theme=light] .flash{background:var(--ok-bg);border-color:var(--ok-bd);color:var(--ok-tx)}
+html[data-theme=light] .flash-error{background:var(--err-bg);border-color:var(--err-bd);color:var(--err-tx)}
+html[data-theme=light] .flash-info{background:var(--info-bg);border-color:var(--info-bd);color:var(--info-tx)}
+html[data-theme=light] .search{background:color-mix(in srgb,var(--bg) 94%,transparent)}
+html[data-theme=light] .search-results,html[data-theme=light] .ta-all{color:var(--tx)}
+html[data-theme=light] mark{background:color-mix(in srgb,var(--accent) 28%,transparent);color:var(--tx)}
+
+/* accent on light: text/links that used the neon accent now use the darkened accent */
+html[data-theme=light] .nav a.on,html[data-theme=light] .nav a:hover{color:var(--c,var(--accent))}
+html[data-theme=light] .steps li.on{color:var(--tx)}
+html[data-theme=light] .b-paid,html[data-theme=light] .b-completed{color:var(--ok-tx);background:var(--ok-bg)}
+html[data-theme=light] .b-pending,html[data-theme=light] .b-unpaid{color:var(--warn)}
+html[data-theme=light] .b-processing,html[data-theme=light] .b-shipped{color:var(--info-tx);background:var(--info-bg)}
+html[data-theme=light] .mcard{background:linear-gradient(135deg,var(--tx),var(--tc))}
+html[data-theme=light] .mcard b,html[data-theme=light] .mcard code{color:#fff}
+html[data-theme=light] .lc-range::-webkit-slider-thumb{box-shadow:0 2px 8px rgba(0,0,0,.25)}
+
+/* soften department colours slightly so they sit calmly on cream */
+html[data-theme=light] .panel,html[data-theme=light] .pill{filter:saturate(.92)}
+
+@media (prefers-reduced-motion:reduce){html{transition:none}}

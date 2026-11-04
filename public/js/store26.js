@@ -125,4 +125,28 @@
         if (btn) btn.disabled = false;
       }).catch(function () { if (msg) { msg.hidden = false; msg.textContent = 'Network error — try again.'; msg.className = 'sub-msg bad'; } if (btn) btn.disabled = false; });
   }, true);
+
+  /* ---------- v3.0 light / dark toggle ---------- */
+  (function () {
+    var C = window.KIOSK_THEME; if (!C) return;
+    var root = d.documentElement, btns = $$('#theme-toggle, .theme-toggle');
+    var meta = $('meta[name=theme-color]');
+    function cur() { return root.getAttribute('data-theme') === 'light' ? 'light' : 'dark'; }
+    function paint() {
+      var l = cur() === 'light';
+      btns.forEach(function (b) { b.setAttribute('aria-pressed', l ? 'true' : 'false'); b.setAttribute('aria-label', l ? 'Switch to dark theme' : 'Switch to light theme'); b.title = l ? 'Switch to dark theme' : 'Switch to light theme'; });
+      if (meta) meta.setAttribute('content', l ? C.light : C.dark);
+    }
+    function apply(v) {
+      root.setAttribute('data-theme', v);
+      if (v === 'light' && !d.getElementById('kiosk-light-fonts')) { var l = d.createElement('link'); l.rel = 'stylesheet'; l.id = 'kiosk-light-fonts'; l.href = C.fonts; d.head.appendChild(l); }
+      paint();
+    }
+    btns.forEach(function (b) { b.addEventListener('click', function () { var n = cur() === 'light' ? 'dark' : 'light'; apply(n); try { localStorage.setItem('kiosk_theme', n); } catch (e) {} }); });
+    if (window.matchMedia && C.mode === 'auto') {
+      var mq = matchMedia('(prefers-color-scheme: light)'), h = function () { var s = null; try { s = localStorage.getItem('kiosk_theme'); } catch (e) {} if (!s || !C.toggle) apply(mq.matches ? 'light' : 'dark'); };
+      if (mq.addEventListener) mq.addEventListener('change', h);
+    }
+    paint();
+  })();
 })();

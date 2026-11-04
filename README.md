@@ -31,6 +31,13 @@ Product types: **Physical**, **Key/code** and **Account** (delivered automatical
 ## Payments
 Admin → Settings → Payments: Stripe Checkout, PayPal, bank transfer, cash on delivery. Stripe webhook: `/pay/stripe/webhook` (event `checkout.session.completed`). Test with sandbox credentials first.
 
+## 3.0.0 — Light theme & Themes admin
+- **Brand-new light theme** (not just inverted colours): warm cream background, white cards, serif display headings in sentence case (Fraunces by default) with DM Sans body text, softer corners and soft shadows. The original dark KIOSK look is unchanged.
+- **Customer toggle**: a sun/moon button in the store header (also on the checkout header). The choice is remembered per browser; first-time visitors follow their device (`prefers-color-scheme`) unless you pick a default. No flash of the wrong theme on load.
+- **Admin → Content → Themes**: default mode (follow device / dark / light), show or hide the customer toggle, light-theme palette (background, cards, text, accent — accent can be derived automatically from your store accent so it stays readable), font pairs (Fraunces + DM Sans, Playfair Display + Inter, Cormorant Garamond + Jost, Plus Jakarta Sans), corner roundness (sharp / soft / round / pill), an optional separate light-theme logo, a live light/dark preview with contrast checks, and reset-to-defaults.
+- **Under the hood**: every hard-coded dark colour in the storefront stylesheets (`store.css`, `store26.css`, `commerce26.css`, `loyalty27.css`) was replaced by CSS variables, so a theme is just a variable set; `public/css/theme-light.css` holds the light overrides and `App\Support\Theme` builds the variables, fonts and the pre-paint boot script. No database migration; new settings fall back to sensible defaults.
+- Update from 2.7.0+ via Admin → System & updates → upload `release/update-3.0.0.zip`.
+
 ## 2.7.5
 - **Rewards UI redesign**: product pages show an animated earn card (points, money value, your tier multiplier, progress toward your next reward, sign-in prompt for guests, a hint when a price is too low to earn). The checkout Rewards bar is a collapsible panel with “+N pts” / “−amount” pills, earn card, next-reward progress, a redeem slider with 25% / 50% / Max chips and a cashback toggle.
 - **Fix**: money formatting error in the browser (`str.indexOf is not a function`) that froze live prices and the **gift-card preview for amounts of 1,000 or more**; the preview now also shrinks long amounts and warns when the amount is outside the allowed range.
